@@ -1,0 +1,18 @@
+mlflow:
+  experiment_name: iris
+  run_name: non scale
+dataset:
+  random_state: 57
+  shuffle: True
+  train_size: 0.75
+  should_scale: False
+train:
+  structure: s
+  epochs: 25
+  learning_rate: 0.01
+  back_end: qasm_simulator
+  shots: 8000
+  should_show: False
+  should_normalize: True
+  should_save_each_epoch: False
+  on_ibmq: False
