@@ -29,9 +29,9 @@ Run `python ./src/[objective_script]`, whose `[objective_script]` is one of the 
 | `wine_model.py` | 3 | 13 |
 
 ## Other
-The following statements are original.
-
----
+<details>
+<summary>Original README
+</summary>
 
 弊社の社内研究にて、量子機械学習の研究の一環として作成したソースコードを公開する。本研究では既存の論文をもとにクラス分類を行うモデルを実装した。本ソースコードは社内の別の開発者の許可をいただいて公開している。
 
@@ -63,3 +63,4 @@ python ./src/[objective_script]
 | `breast_cancer_model.py` | 2 | 30 |
 | `iris_model.py` | 3 | 4 |
 | `wine_model.py` | 3 | 13 |
+</details>
