@@ -93,13 +93,13 @@ class QuClassiCircuit():
         if not is_in_train:
             print("Successfully built.")
 
-    def run(self, back_end: str, shots: int, on_ibmq: bool) -> float:
+    def run(self, backend: str, shots: int, on_ibmq: bool) -> float:
         """Run the quantum circuit and obtain the fidelity-like value
         Note that, it is not the exact quantum state fidelity |<x|y>| but (1 + |<x|y>|^2)/2.
         This output is for comparing two numbers by their size and (1 + k^2)/2 < (1 + l^2)/2 holds for any k < l.
         Therefore it is not a big problem if either the fidelity-like value or the exact quantum state fidelity is used.
 
-        :param str back_end: backend
+        :param str backend: backend
         :param int shots: number of executions
         :param bool on_ibmq: whether or not ibmq is used
         :raises ValueError: if "0" is not observed
@@ -107,9 +107,9 @@ class QuClassiCircuit():
         """
         # Execute the quantum circuit
         if on_ibmq:
-            job = qiskit.execute(qiskit.transpile(self.quantum_circuit, back_end), backend=back_end, shots=shots)
+            job = qiskit.execute(qiskit.transpile(self.quantum_circuit, backend), backend=backend, shots=shots)
         else:
-            simulator = qiskit.Aer.get_backend(back_end)
+            simulator = qiskit.Aer.get_backend(backend)
             job = qiskit.execute(self.quantum_circuit, simulator, shots=shots)
 
         # Get the result
@@ -242,7 +242,7 @@ class QuClassiCircuit():
         except:
             print(self.quantum_circuit.draw())
 
-    def train(self, data: List[List[float]], label: str, epochs: int, learning_rate: float, back_end: str, shots: int,
+    def train(self, data: List[List[float]], label: str, epochs: int, learning_rate: float, backend: str, shots: int,
               should_normalize: bool, should_show: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train the quantum circuit
 
@@ -250,7 +250,7 @@ class QuClassiCircuit():
         :param str label: training label
         :param int epochs: number of epochs
         :param float learning_rate: learning rate
-        :param str back_end: backend
+        :param str backend: backend
         :param int shots: number of executions
         :param bool should_normalize: whether or not normalise each data
         :param bool should_show: whether or not print learning process
@@ -290,7 +290,7 @@ class QuClassiCircuit():
                             forward_thetas_list[first_theta_index][second_theta_index][third_theta_index] += np.pi / (2 * np.sqrt(epoch))
                             forward_quclassi.build_quantum_circuit(self.structure, forward_thetas_list, is_in_train=True)                        
                             forward_quclassi.load_into_qubits(vector)
-                            forward_fidelity_like = forward_quclassi.run(back_end=back_end, shots=shots, on_ibmq=on_ibmq)
+                            forward_fidelity_like = forward_quclassi.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
 
                             # Calculate the quantum fidelity-like value of the backward state
                             backward_quclassi = QuClassiCircuit(self.modified_input_size)
@@ -298,11 +298,11 @@ class QuClassiCircuit():
                             backward_thetas_list[first_theta_index][second_theta_index][third_theta_index] -= np.pi / (2 * np.sqrt(epoch))
                             backward_quclassi.build_quantum_circuit(self.structure, backward_thetas_list, is_in_train=True)
                             backward_quclassi.load_into_qubits(vector)
-                            backward_fidelity_like = backward_quclassi.run(back_end=back_end, shots=shots, on_ibmq=on_ibmq)
+                            backward_fidelity_like = backward_quclassi.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
 
                             # Calculate the loss value
                             self.load_into_qubits(vector)
-                            loss = self.run(back_end=back_end, shots=shots, on_ibmq=on_ibmq)
+                            loss = self.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
                             total_loss += loss
 
                             # Update the parameter
@@ -405,11 +405,11 @@ class QuClassiCircuit():
 
         return loaded_quclassi_circuit
 
-    def calculate_likelihood(self, data: Union[List[List[float]], List[float]], back_end: str, shots: int, should_normalize: bool, on_ibmq: bool) -> List[float]:
+    def calculate_likelihood(self, data: Union[List[List[float]], List[float]], backend: str, shots: int, should_normalize: bool, on_ibmq: bool) -> List[float]:
         """Calculate likeliohoods
 
         :param Union[List[List[float]], List[float]] data: classical data
-        :param str back_end: backend
+        :param str backend: backend
         :param int shots: number of executions
         :param bool should_normalize: whether or not normalise each data
         :param bool on_ibmq: whether or not ibmq is used
@@ -424,7 +424,7 @@ class QuClassiCircuit():
         likelihoods = []
         for vector in prepared_data:
             self.load_into_qubits(vector)
-            fidelity_like = self.run(back_end=back_end, shots=shots, on_ibmq=on_ibmq)
+            fidelity_like = self.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
 
             likelihoods.append(fidelity_like)
 

@@ -71,7 +71,7 @@ class QuClassi():
             self.quantum_circuits[label].build_quantum_circuit(structure=structure, thetas_list=copy.deepcopy(thetas_list), is_in_train=False)
 
     def train(self, train_data: List[List[float]], train_labels: List[str],
-              epochs: Union[Dict[str, int], int], learning_rate: float, back_end: str,
+              epochs: Union[Dict[str, int], int], learning_rate: float, backend: str,
               shots: int, should_normalize: bool, should_show: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train the quantum circuits
 
@@ -79,7 +79,7 @@ class QuClassi():
         :param List[str] train_labels: training labels
         :param Union[Dict[str, int], int] epochs: number of epochs
         :param float learning_rate: learning rate
-        :param str back_end: backend
+        :param str backend: backend
         :param int shots: number of executions
         :param bool should_normalize: whether or not normalise each data
         :param bool should_show: whether or not print learning process
@@ -107,12 +107,12 @@ class QuClassi():
             focused_train_data = np.array(train_data)[focused_indices]
             self.quantum_circuits[label].train(focused_train_data, label=label,
                                                epochs=current_epochs, learning_rate=learning_rate,
-                                               back_end=back_end, shots=shots, should_normalize=should_normalize, should_show=should_show,
+                                               backend=backend, shots=shots, should_normalize=should_normalize, should_show=should_show,
                                                should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
 
     def train_and_eval(self, train_data: List[List[float]], train_labels: List[str],
                        dev_data: List[List[float]], dev_label: List[str],
-                       epochs: int, learning_rate: float, back_end: str,
+                       epochs: int, learning_rate: float, backend: str,
                        shots: int, should_normalize: bool, should_show: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train and evaluate all quantum circuits
 
@@ -120,7 +120,7 @@ class QuClassi():
         :param List[str] train_labels: training labels
         :param Union[Dict[str, int], int] epochs: number of epochs
         :param float learning_rate: learning rate
-        :param str back_end: backend
+        :param str backend: backend
         :param int shots: number of executions
         :param bool should_normalize: whether or not normalise each data
         :param bool should_show: whether or not print learning process
@@ -141,12 +141,12 @@ class QuClassi():
                 focused_train_data = np.array(train_data)[focused_indices]
                 self.quantum_circuits[label].train(focused_train_data, label=label,
                                                    epochs=1, learning_rate=learning_rate,
-                                                   back_end=back_end, shots=shots, should_normalize=should_normalize, should_show=should_show,
+                                                   backend=backend, shots=shots, should_normalize=should_normalize, should_show=should_show,
                                                    should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
 
             print(f"============ epoch {epoch} evaluation ============")
             # Classify data
-            _, probabilities_list = self.classify(data=train_data, back_end=back_end, shots=shots,
+            _, probabilities_list = self.classify(data=train_data, backend=backend, shots=shots,
                                                   should_normalize=should_normalize, on_ibmq=on_ibmq)
 
             # Calculate the crossentropy between predicions and truths
@@ -161,7 +161,7 @@ class QuClassi():
             self.loss_history.append(current_loss)
 
             current_accuracy = self.evaluate(data=dev_data, true_labels=dev_label,
-                                             back_end=back_end, shots=shots,
+                                             backend=backend, shots=shots,
                                              should_normalize=should_normalize, on_ibmq=on_ibmq)
 
             if self.best_accuracy is None or current_accuracy < self.best_accuracy:
@@ -193,12 +193,12 @@ class QuClassi():
         loss = - np.sum(true_distribution * np.log(probabilities_list)) / len(probabilities_list)
         return loss
 
-    def classify(self, data: List[List[float]], back_end: str, shots: int,
+    def classify(self, data: List[List[float]], backend: str, shots: int,
                  should_normalize: bool, on_ibmq: bool) -> Tuple[List[str], List[List[float]]]:
         """Classify data
 
         :param List[List[float]] data: data
-        :param str back_end: backend
+        :param str backend: backend
         :param int shots: number of executions
         :param bool should_normalize: whether or not normalise each data
         :param bool on_ibmq: whether or not ibmq is used
@@ -209,7 +209,7 @@ class QuClassi():
         likelihoods_list = []
         for label in self.unique_labels:
             likelihoods_list.append(self.quantum_circuits[label].calculate_likelihood(data,
-                                                                                      back_end=back_end,
+                                                                                      backend=backend,
                                                                                       shots=shots,
                                                                                       should_normalize=should_normalize,
                                                                                       on_ibmq=on_ibmq))
@@ -227,12 +227,12 @@ class QuClassi():
         return classified_labels, probabilities_list
 
     def evaluate(self, data: List[List[float]], true_labels: List[str],
-                 back_end: str, shots: int, should_normalize: bool, on_ibmq: bool) -> float:
+                 backend: str, shots: int, should_normalize: bool, on_ibmq: bool) -> float:
         """Evaluate the quantum circuits
 
         :param List[List[float]] data: data
         :param List[str] true_labels: true labels
-        :param str back_end: backend
+        :param str backend: backend
         :param int shots: number of executions
         :param bool should_normalize: whether or not normalise each data
         :param bool on_ibmq: whether or not ibmq is used
@@ -252,7 +252,7 @@ class QuClassi():
             focused_data = data[focused_indices]
             focused_true_labels = np.array(true_labels)[focused_indices]
 
-            classified_labels, _ = self.classify(data=focused_data, back_end=back_end, shots=shots, should_normalize=should_normalize, on_ibmq=on_ibmq)
+            classified_labels, _ = self.classify(data=focused_data, backend=backend, shots=shots, should_normalize=should_normalize, on_ibmq=on_ibmq)
 
             correct = 0
             wrong = 0

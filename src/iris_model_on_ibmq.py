@@ -85,7 +85,7 @@ def set_epochs(quclassi_object: QuClassi, objective_epochs: int) -> Dict[str, in
 
 
 def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size: float, should_scale: bool,
-                                    structure: str, epochs: int, learning_rate: float, back_end: str, shots: int,
+                                    structure: str, epochs: int, learning_rate: float, backend: str, shots: int,
                                     should_normalize: bool, should_show: bool, should_save_each_epoch: bool) -> Tuple[QuClassi, float, Tuple[time.time, time.time]]:
     """Train and evaluate QuClassi with the iris dataset on IBMQ
 
@@ -96,7 +96,7 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
     :param List[str] structure: string, which has only s, d and c, to decide the structure
     :param int epochs: number of epochs
     :param float learning_rate: learning rate
-    :param str back_end: backend
+    :param str backend: backend
     :param int shots: number of executions
     :param bool should_normalize: whether or not normalise each data
     :param bool should_show: whether or not print learning process
@@ -136,7 +136,7 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
 
         quclassi.train(x_train, y_train,
                        epochs=epochs_dict, learning_rate=learning_rate,
-                       back_end=back_end, shots=shots, should_normalize=should_normalize,
+                       backend=backend, shots=shots, should_normalize=should_normalize,
                        should_show=should_show, should_save_each_epoch=should_save_each_epoch, on_ibmq=True)
     train_time = time.time() - start_time
     print("Training is done.")
@@ -146,7 +146,7 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
 
     # Evaluate the QuClassi
     start_time = time.time()
-    accuracy = quclassi.evaluate(x_test, y_test, back_end=back_end, shots=shots, should_normalize=should_normalize, on_ibmq=True)
+    accuracy = quclassi.evaluate(x_test, y_test, backend=backend, shots=shots, should_normalize=should_normalize, on_ibmq=True)
     eval_time = time.time() - start_time
     print("Evaluating is done.")
 
@@ -187,8 +187,8 @@ if __name__ == "__main__":
 
     # Get which a quantum computer is used from the standard input
     print("Which backend should be used? Tell me the name as a position (integer).: ", end="")
-    back_end_position = int(input())
-    config_train["back_end"] = provider.backends()[back_end_position]
+    backend_position = int(input())
+    config_train["backend"] = provider.backends()[backend_position]
 
     # Run mlflow and train and evaluate a QuClassi model
     mlflow.set_experiment(config_mlflow["experiment_name"])

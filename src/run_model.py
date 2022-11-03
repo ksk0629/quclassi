@@ -37,7 +37,7 @@ def preprocess_dataset(data: List[List[float]], labels: List[str], random_state:
 
 def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
                        random_state: int, shuffle: bool, train_size: float, should_scale: bool,
-                       structure: str, epochs: int, learning_rate: float, back_end: str, shots: int,
+                       structure: str, epochs: int, learning_rate: float, backend: str, shots: int,
                        should_normalize: bool, should_show: bool, should_save_each_epoch: bool,
                        on_ibmq: bool) -> Tuple[object, time.time]:
     """Train and evaluate QuClassi
@@ -52,7 +52,7 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
     :param List[str] structure: string, which has only s, d and c, to decide the structure
     :param int epochs: number of epochs
     :param float learning_rate: learning rate
-    :param str back_end: backend
+    :param str backend: backend
     :param int shots: number of executions
     :param bool should_normalize: whether or not normalise each data
     :param bool should_show: whether or not print learning process
@@ -76,7 +76,7 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
     start_time = time.time()
     quclassi.train_and_eval(x_train, y_train, x_test, y_test,
                             epochs=epochs, learning_rate=learning_rate,
-                            back_end=back_end, shots=shots, should_normalize=should_normalize,
+                            backend=backend, shots=shots, should_normalize=should_normalize,
                             should_show=should_show, should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
     process_time = time.time() - start_time
     print("Training and evaluating is done.")
