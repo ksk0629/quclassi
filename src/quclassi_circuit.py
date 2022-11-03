@@ -8,7 +8,7 @@ import qiskit
 
 
 class QuClassiCircuit():
-    """One quantum circuit, which corresponds to one class"""
+    """One quantum circuit belonging to a QuClassi, which corresponds to one class"""
 
     def __init__(self, input_size: int, name: Optional[str] = None) -> None:
         """Initialise a quantum circuit
@@ -20,13 +20,11 @@ class QuClassiCircuit():
         if input_size % 2 != 0:
             input_size += 1
 
-        self.modified_input_size = input_size  # input size
-        self.num_qubits = input_size + 1  # number of total qubits
-        self.num_trained_qubits = input_size // 2  # number of qubits for generating a representative quantum state
-        self.num_cbits = 1  # number of classical bits
-
         # Initialise class variables
-        self.best_loss = None
+        self.modified_input_size = input_size  # an input size
+        self.num_qubits = input_size + 1  # the number of total qubits
+        self.num_trained_qubits = input_size // 2  # the number of qubits for generating a representative quantum state
+        self.num_cbits = 1  # the number of classical bits
         self.loss_history = []
         self.epochs = 0
         self.label = None
@@ -41,6 +39,14 @@ class QuClassiCircuit():
                                                      self.loaded_quantum_register,
                                                      self.classical_register,
                                                      name=name)
+
+    @property
+    def best_loss(self) -> float:
+        """Return the best loss value
+
+        :return float: best loss value
+        """
+        return np.min(self.loss_history) if len(self.loss_history) != 0 else None
 
     def build_quantum_circuit(self, structure: List[str], thetas_list: List[List[float]], is_in_train: bool = False) -> None:
         """Build a quantum circuit
