@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config_yaml_path", required=False, type=str, default="./config_breast_cancer.yaml")
     args = parser.parse_args()
 
-    # breast_cancerデータセットを読み込む
+    # Load the breast cancer dataset
     breast_cancer_data = datasets.load_breast_cancer(return_X_y=True)
     data, labels = breast_cancer_data
     labels = [f"{label}" for label in labels]
