@@ -18,27 +18,94 @@ class QuClassiCircuit():
         """
         # Let the given input_size be an even number
         if input_size % 2 != 0:
-            input_size += 1
+            modified_input_size = input_size + 1
 
         # Initialise class variables
-        self.modified_input_size = input_size  # an input size
-        self.num_qubits = input_size + 1  # the number of total qubits
-        self.num_trained_qubits = input_size // 2  # the number of qubits for generating a representative quantum state
-        self.num_cbits = 1  # the number of classical bits
-        self.loss_history = []
-        self.epochs = 0
-        self.label = None
+        self.__modified_input_size = modified_input_size  # an input size
+        self.__num_trained_qubits = modified_input_size // 2  # the number of qubits for generating a representative quantum state
+        self.__num_cbits = 1  # the number of classical bits
+        self.__loss_history = []
+        self.__epochs = 0
+        self.__label = None
 
         # Generate a quantum circuit
-        self.control_quantum_register = qiskit.QuantumRegister(1, name="control_qubit")
-        self.trained_quantum_register = qiskit.QuantumRegister(self.num_trained_qubits, name="trained_qubit")
-        self.loaded_quantum_register = qiskit.QuantumRegister(self.num_trained_qubits, name="loaded_qubit")
-        self.classical_register = qiskit.ClassicalRegister(self.num_cbits, name="classical_bit")
-        self.quantum_circuit = qiskit.QuantumCircuit(self.control_quantum_register,
-                                                     self.trained_quantum_register,
-                                                     self.loaded_quantum_register,
-                                                     self.classical_register,
-                                                     name=name)
+        self.__control_quantum_register = qiskit.QuantumRegister(1, name="control_qubit")
+        self.__trained_quantum_register = qiskit.QuantumRegister(self.num_trained_qubits, name="trained_qubit")
+        self.__loaded_quantum_register = qiskit.QuantumRegister(self.num_trained_qubits, name="loaded_qubit")
+        self.__classical_register = qiskit.ClassicalRegister(self.num_cbits, name="classical_bit")
+        self.__quantum_circuit = qiskit.QuantumCircuit(self.control_quantum_register,
+                                                       self.trained_quantum_register,
+                                                       self.loaded_quantum_register,
+                                                       self.classical_register,
+                                                       name=name)
+
+    @property
+    def modified_input_size(self) -> int:
+        """Return the modified input size
+
+        :return int: modified input size
+        """
+        return self.__modified_input_size
+
+    @property
+    def num_trained_qubits(self) -> int:
+        """Return the number of trained qubits
+
+        :return int: number of trained qubits
+        """
+        return self.__num_trained_qubits
+
+    @property
+    def num_cbits(self) -> int:
+        """Return the number of classical bits
+
+        :return int: number of classical bits
+        """
+        return self.__num_cbits
+
+    @property
+    def loss_history(self) -> List[float]:
+        """Return the loss values
+
+        :return List[float]: loss values
+        """
+        return self.__loss_history
+
+    @property
+    def epochs(self) -> int:
+        """Return the number of epochs that have been done
+
+        :return int: number of epochs
+        """
+        return self.__epochs
+
+    @property
+    def label(self) -> str:
+        """Return the label
+
+        :return str: label
+        """
+        return self.__label
+
+    @property
+    def control_quantum_register(self) -> qiskit.QuantumRegister:
+        return self.__control_quantum_register
+    
+    @property
+    def trained_quantum_register(self) -> qiskit.QuantumRegister:
+        return self.__trained_quantum_register
+    
+    @property
+    def loaded_quantum_register(self) -> qiskit.QuantumRegister:
+        return self.__loaded_quantum_register
+    
+    @property
+    def classical_register(self) -> qiskit.ClassicalRegister:
+        return self.__classical_register
+    
+    @property
+    def quantum_circuit(self) -> qiskit.QuantumCircuit:
+        return self.__quantum_circuit
 
     @property
     def best_loss(self) -> float:
@@ -275,7 +342,7 @@ class QuClassiCircuit():
         prepared_data = self.normalize_data(data) if should_normalize else data.copy()
 
         # Store the given label into a class variable
-        self.label = label
+        self.__label = label
 
         duration = len(data) // 10
 
@@ -335,8 +402,8 @@ class QuClassiCircuit():
 
             # Update learning information in class variables
             total_loss_over_epochs = len(data) - total_loss_over_epochs
-            self.loss_history.append(total_loss_over_epochs)
-            self.epochs += 1
+            self.__loss_history.append(total_loss_over_epochs)
+            self.__epochs += 1
             if len(self.loss_history) == 1 or total_loss_over_epochs < self.best_loss:
                 print(f"\tloss = {total_loss_over_epochs} <- the best loss ever")
             else:
