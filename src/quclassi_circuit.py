@@ -48,6 +48,14 @@ class QuClassiCircuit():
         """
         return np.min(self.loss_history) if len(self.loss_history) != 0 else None
 
+    @property
+    def best_epochs(self) -> int:
+        """Return the epoch with the best loss value
+
+        :return int: best epoch
+        """
+        return np.argmin(self.loss_history) + 1 if len(self.loss_history) != 0 else None
+
     def build_quantum_circuit(self, structure: List[str], thetas_list: List[List[float]], is_in_train: bool = False) -> None:
         """Build a quantum circuit
 
@@ -329,9 +337,7 @@ class QuClassiCircuit():
             total_loss_over_epochs = len(data) - total_loss_over_epochs
             self.loss_history.append(total_loss_over_epochs)
             self.epochs += 1
-            if self.best_loss is None or total_loss_over_epochs < self.best_loss:
-                self.best_loss = total_loss_over_epochs
-                self.best_epochs = epoch
+            if len(self.loss_history) == 1 or total_loss_over_epochs < self.best_loss:
                 print(f"\tloss = {total_loss_over_epochs} <- the best loss ever")
             else:
                 print(f"\tloss = {total_loss_over_epochs}")
