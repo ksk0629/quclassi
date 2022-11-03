@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config_yaml_path", required=False, type=str, default="./config_iris.yaml")
     args = parser.parse_args()
 
-    # irisデータセットを読み込む
+    # Load the iris dataset
     iris = datasets.load_iris()
     data = iris.data
     labels = list(iris.target)

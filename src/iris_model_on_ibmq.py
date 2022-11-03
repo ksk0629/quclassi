@@ -19,10 +19,10 @@ LATEST_VIRGINICA_PATH = "latest_virginica.json"
 
 
 def load_latest_circuits(quclassi_object: QuClassi) -> QuClassi:
-    """最直近のirisデータ用の量子回路情報を読込む
+    """Load the latest quantum circuits for the iris dataset
 
-    :param QuClassi quclassi_object: irisデータ用のQuClassi
-    :return QuClassi quclassi_object: 最直近の量子回路情報を読込んだQuClassi
+    :param QuClassi quclassi_object: QuClassi for iris dataset
+    :return QuClassi quclassi_object: Loaded the latest QuClassi for iris dataset
     """
     try:
         quclassi_object.quantum_circuits["setosa"].load_parameters_from_json(LATEST_SETOSA_PATH)
@@ -46,11 +46,11 @@ def load_latest_circuits(quclassi_object: QuClassi) -> QuClassi:
 
 
 def set_epochs(quclassi_object: QuClassi, objective_epochs: int) -> Dict[str, int]:
-    """目標学習回数に向けて、現在の学習回数を参考に細かく分けた学習回数を各量子回路毎に設定する
+    """Get epochs that are adjusted with objective epochs for each quantum circuit
 
-    :param QuClassi quclassi_object: irisデータ用のQuClassi
-    :param int objective_epochs: 目標学習回数
-    :return Dict[str, int] epochs_dict: 目標学習回数に応じて細かく分けた学習回数
+    :param QuClassi quclassi_object: QuClassi for iris dataset
+    :param int objective_epochs: objective epochs
+    :return Dict[str, int] epochs_dict: adjusted epochs
     """
     small_epoch = 5 if objective_epochs > 5 else objective_epochs
 
@@ -87,25 +87,25 @@ def set_epochs(quclassi_object: QuClassi, objective_epochs: int) -> Dict[str, in
 def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size: float, should_scale: bool,
                                     structure: str, epochs: int, learning_rate: float, back_end: str, shots: int,
                                     should_normalize: bool, should_show: bool, should_save_each_epoch: bool) -> Tuple[QuClassi, float, Tuple[time.time, time.time]]:
-    """irisデータを使い実機上でQuClassiの学習と評価を行う
+    """Train and evaluate QuClassi with the iris dataset on IBMQ
 
-    :param int random_state: 乱数シード
-    :param bool shuffle: 分割時にデータをシャッフルするかどうか
-    :param float train_size: 分割時の学習データの比率
-    :param bool should_scale: スケーリングするかどうか
-    :param str structure: QuClassiの構造を定める文字列
-    :param int epochs: 学習回数
-    :param float learning_rate: 学習率
-    :param str back_end: バックエンド名
-    :param int shots: 量子回路の実行回数(期待値を取る回数)
-    :param bool should_normalize: 各データを正規化するかどうか
-    :param bool should_show: 学習過程を標準出力に出すかどうか
-    :param bool should_save_each_epoch: 1エポック毎に量子回路の情報を出力するかどうか
-    :return QuClassi quclassi: 学習済みのQuClassiオブジェクト
-    :return float accuracy: 評価結果(正確度)
-    :return Tuple[time.time, time.time] (train_time, eval_time): それぞれ学習と評価にかかった時間
+    :param int random_state: random seed
+    :param bool shuffle: whether or not data is shuffled
+    :param float train_size: ratio of training data and evaluating data
+    :param bool should_scale: whether or not each data is scaled
+    :param List[str] structure: string, which has only s, d and c, to decide the structure
+    :param int epochs: number of epochs
+    :param float learning_rate: learning rate
+    :param str back_end: backend
+    :param int shots: number of executions
+    :param bool should_normalize: whether or not normalise each data
+    :param bool should_show: whether or not print learning process
+    :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
+    :return QuClassi quclassi: Trained QuClassi
+    :return float accuracy: accuracy
+    :return Tuple[time.time, time.time] (train_time, eval_time): process times
     """
-    # 前処理を行い、学習用と評価用に分割したirisデータを取得する
+    # Preprocess the iris dataset and separate it into ones for training and evaluating
     iris = datasets.load_iris()
     data = iris.data
     labels = list(iris.target)
@@ -114,14 +114,14 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
     x_train, x_test, y_train, y_test = run_model.preprocess_dataset(data=data, labels=labels, random_state=random_state, shuffle=shuffle, train_size=train_size, should_scale=should_scale)
     print("Dataset preparation is done.")
 
-    # irisデータ用のQuClassiを作成する
+    # Generate QuClassi for the iris dataset
     input_size = len(data[0])
     unique_labels = np.unique(labels)
     quclassi = QuClassi(input_size, unique_labels)
     quclassi.build_quantum_circuits(structure)
     print("Quclassi was built.")
 
-    # 学習回数が目標学習回数に到達するまで分割して細かく学習を進める
+    # Train the QuClassi repeatedly with small epochs
     start_time = time.time()
     count = 0
     while True:
@@ -141,10 +141,10 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
     train_time = time.time() - start_time
     print("Training is done.")
 
-    # 学習済みのQuClassiを保存する
+    # Save the QuClassi
     quclassi.save_model_as_json(iris_model.PREFIX)
 
-    # 学習済みのQuClassiを評価する
+    # Evaluate the QuClassi
     start_time = time.time()
     accuracy = quclassi.evaluate(x_test, y_test, back_end=back_end, shots=shots, should_normalize=should_normalize, on_ibmq=True)
     eval_time = time.time() - start_time
@@ -158,70 +158,70 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config_yaml_path", required=False, type=str, default="./config_iris.yaml")
     args = parser.parse_args()
 
-    # 設定ファイルを読み込む
+    # Load the setting file
     with open(args.config_yaml_path, "r") as yaml_f:
         config = yaml.safe_load(yaml_f)
     config_mlflow = config["mlflow"]
     config_dataset = config["dataset"]
     config_train = config["train"]
 
-    # on_ibmqがFalseである場合にはエラーを発生させる
+    # Raise the error if the given on_ibmq is False
     if not config_train["on_ibmq"]:
         raise ValueError(f"on_ibmq in {args.config_yaml_path} must be True.")
 
     del config_train["on_ibmq"]
 
-    # 標準入力からIBMQに接続するためのapiトークンを取得する
+    # Get an API token of IBMQ from the standard input
     print("Input api_token: ", end="")
     api_token = input()
 
-    # IBMQに関するアカウント情報を取得する
+    # Set the account information
     qiskit.IBMQ.save_account(api_token, overwrite=True)
 
-    # 使用可能な実機を標準出力に出力する
+    # Print all available quantum computers
     provider = qiskit.IBMQ.load_account()
     print()
     qiskit.tools.monitor.backend_overview()
     for backend in provider.backends():
         print(backend)
 
-    # どの実機を使うかを標準入力から取得する
+    # Get which a quantum computer is used from the standard input
     print("Which backend should be used? Tell me the name as a position (integer).: ", end="")
     back_end_position = int(input())
     config_train["back_end"] = provider.backends()[back_end_position]
 
-    # mlflowの設定を行い、学習と評価を実行する
+    # Run mlflow and train and evaluate a QuClassi model
     mlflow.set_experiment(config_mlflow["experiment_name"])
     with mlflow.start_run(run_name=config_mlflow["run_name"]):
-        # 現在アクティブなrunのidを取得する
+        # Get an activate run id
         run_id = mlflow.active_run().info.run_id
 
         try:
-            # データセットと学習に関連するパラメータをmlflowに登録する
+            # Register information of training parameters to mlflow
             mlflow.log_params(config_dataset)
             mlflow.log_params(config_train)
 
-            # 学習と訓練を実行する
+            # Train and evaluate a QuClassi
             quclassi, accuracy, (train_time, eval_time) = train_and_evaluate_iris_on_ibmq(**config_dataset, **config_train)
 
-            # 学習時の損失値を量子回路毎にmlflowに登録する
+            # Register loss values to mlflow
             mlflow.log_metric("train_time", train_time)
             for label in quclassi.unique_labels:
                 loss_history = quclassi.quantum_circuits[label].loss_history
                 for epoch, loss in enumerate(loss_history):
                     mlflow.log_metric(f"{label}_loss", loss, step=epoch+1)
 
-            # 評価結果をmlflowに登録する
+            # Register evaluation result to mlflow
             mlflow.log_metric("eval_time", eval_time)
             mlflow.log_metric("accuracy", accuracy)
 
-            # 使用した設定ファイルそのものとモデルファイルをmlflowに登録する
+            # Register the setting file and the model file to mlflow
             mlflow.log_artifact(args.config_yaml_path)
             paths = [f"{iris_model.PREFIX}_{label}.json" for label in quclassi.unique_labels]
             paths.append(f"{iris_model.PREFIX}_config.json")
             for path in paths:
                 mlflow.log_artifact(path)
 
-        # 中断されたrunのidを標準出力へ出力する
         except:
+            # Print the run id that was interrupted
             print(f"Interrupted run id is {run_id}")

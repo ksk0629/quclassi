@@ -11,25 +11,25 @@ from quclassi import QuClassi
 
 
 def preprocess_dataset(data: List[List[float]], labels: List[str], random_state: int, shuffle: bool, train_size: float, should_scale: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """データセットに前処理を施した上で、学習用と評価用に分ける
+    """Preprocess dataset and separate it into datasets for training and evaluating
 
-    :param List[List[float]] data: データ
-    :param List[str] labels: データのラベル
-    :param int random_state: 乱数シード
-    :param bool shuffle: 分割時にデータをシャッフルするかどうか
-    :param float train_size: 分割時の学習データの比率
-    :param bool should_scale: スケーリングするかどうか
-    :return np.ndarray x_train: 学習データ
-    :return np.ndarray x_test: 評価データ
-    :return np.ndarray y_train: 学習データのラベル
-    :return np.ndarray y_test: 評価データのラベル
+    :param List[List[float]] data: data
+    :param List[str] labels: data labels
+    :param int random_state: random seed
+    :param bool shuffle: whether or not data is shuffled
+    :param float train_size: ratio of training data and evaluating data
+    :param bool should_scale: whether or not each data is scaled
+    :return np.ndarray x_train: training data
+    :return np.ndarray x_test: evaluating data
+    :return np.ndarray y_train: training label
+    :return np.ndarray y_test: evaluating label
     """
     if should_scale:
-        # スケーリングを行う
+        # Scale data
         scaler = MinMaxScaler(feature_range=(0, 1))
         data = scaler.fit_transform(data)
 
-    # 学習用と評価用にデータを分ける
+    # Separate data into data for training and evaluating
     x_train, x_test, y_train, y_test = train_test_split(data, labels, train_size=train_size, random_state=random_state, shuffle=shuffle, stratify=labels)
 
     return x_train, x_test, y_train, y_test
@@ -40,39 +40,39 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
                        structure: str, epochs: int, learning_rate: float, back_end: str, shots: int,
                        should_normalize: bool, should_show: bool, should_save_each_epoch: bool,
                        on_ibmq: bool) -> Tuple[object, time.time]:
-    """QuClassiの学習と評価を行う
+    """Train and evaluate QuClassi
 
-    :param List[List[float]] data: データ
-    :param List[str] labels: データのラベル
-    :param str prefix: 学習済みモデルを保存するときの接頭語
-    :param int random_state: 乱数シード
-    :param bool shuffle: 分割時にデータをシャッフルするかどうか
-    :param float train_size: 分割時の学習データの比率
-    :param bool should_scale: スケーリングするかどうか
-    :param str structure: QuClassiの構造を定める文字列
-    :param int epochs: 学習回数
-    :param float learning_rate: 学習率
-    :param str back_end: バックエンド名
-    :param int shots: 量子回路の実行回数(期待値を取る回数)
-    :param bool should_normalize: 各データを正規化するかどうか
-    :param bool should_show: 学習過程を標準出力に出すかどうか
-    :param bool should_save_each_epoch: 1エポック毎に量子回路の情報を出力するかどうか
-    :param bool on_ibmq: 実機を使うかどうか
-    :return QuClassi quclassi: 学習済みのQuClassiオブジェクト
-    :return time.time process_time: 学習と評価にかかった時間
+    :param List[List[float]] data: data
+    :param List[str] labels: data labels
+    :param str prefix: prefix of output path of trained model
+    :param int random_state: random seed
+    :param bool shuffle: whether or not data is shuffled
+    :param float train_size: ratio of training data and evaluating data
+    :param bool should_scale: whether or not each data is scaled
+    :param List[str] structure: string, which has only s, d and c, to decide the structure
+    :param int epochs: number of epochs
+    :param float learning_rate: learning rate
+    :param str back_end: backend
+    :param int shots: number of executions
+    :param bool should_normalize: whether or not normalise each data
+    :param bool should_show: whether or not print learning process
+    :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
+    :param bool on_ibmq: whether or not ibmq is used
+    :return QuClassi quclassi: trained quclassi object
+    :return time.time process_time: process time
     """
-    # 前処理を行い、学習用と評価用に分割したデータを取得する
+    # Preprocess dataset and separate it into datasets for training and evaluating
     x_train, x_test, y_train, y_test = preprocess_dataset(data=data, labels=labels, random_state=random_state, shuffle=shuffle, train_size=train_size, should_scale=should_scale)
     print("Dataset preparation is done.")
 
-    # QuClassiを作成する
+    # Generate QuClassi
     input_size = len(data[0])
     unique_labels = np.unique(labels).tolist()
     quclassi = QuClassi(input_size, unique_labels)
     quclassi.build_quantum_circuits(structure)
     print("Quclassi was built.")
 
-    # QuClassiを学習させる
+    # Train and evaluate QuClassi
     start_time = time.time()
     quclassi.train_and_eval(x_train, y_train, x_test, y_test,
                             epochs=epochs, learning_rate=learning_rate,
@@ -81,31 +81,31 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
     process_time = time.time() - start_time
     print("Training and evaluating is done.")
 
-    # 学習済みのQuClassiを保存する
+    # Save the QuClassi model
     quclassi.save_model_as_json(prefix)
 
     return quclassi, process_time
 
 
 def run_with_config(config_yaml_path: str, data: List[List[float]], labels: List[str], prefix: str):
-    # 設定ファイルを読み込む
+    # Load the setting file
     with open(config_yaml_path, "r") as yaml_f:
         config = yaml.safe_load(yaml_f)
     config_mlflow = config["mlflow"]
     config_dataset = config["dataset"]
     config_train = config["train"]
 
-    # mlflowの設定を行い、学習と評価を実行する
+    # Run mlflow and train and evaluate a QuClassi model
     mlflow.set_experiment(config_mlflow["experiment_name"])
     with mlflow.start_run(run_name=config_mlflow["run_name"]):
-        # データセットと学習に関連するパラメータをmlflowに登録する
+        # Register information of training parameters to mlflow
         mlflow.log_params(config_dataset)
         mlflow.log_params(config_train)
 
-        # 学習と訓練を実行する
+        # Train and Evaluate a QuClassi model
         quclassi, process_time = train_and_evaluate(data=data, labels=labels, prefix=prefix, **config_dataset, **config_train)
 
-        # 学習時の損失値をmlflowに登録する
+        # Register loss values to mlflow
         mlflow.log_metric("process_time", process_time)
         for label in quclassi.unique_labels:
             loss_history = quclassi.quantum_circuits[label].loss_history
@@ -114,11 +114,11 @@ def run_with_config(config_yaml_path: str, data: List[List[float]], labels: List
         for epoch, loss in enumerate(quclassi.loss_history):
             mlflow.log_metric(f"train_crros_entropy_loss", loss, step=epoch+1)
 
-        # 評価結果をmlflowに登録する
+        # Register evaluation result to mlflow
         for epoch, accuracy in enumerate(quclassi.accuracy_history):
             mlflow.log_metric(f"dev_accuracy", accuracy, step=epoch+1)
 
-        # 使用した設定ファイルそのものとモデルファイルをmlflowに登録する
+        # Register the setting file and the model file to mlflow
         mlflow.log_artifact(config_yaml_path)
         paths = [f"{prefix}_{label}.json" for label in quclassi.unique_labels]
         paths.append(f"{prefix}_config.json")
