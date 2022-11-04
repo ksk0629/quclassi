@@ -9,7 +9,7 @@ bleach==4.1.0
 cachetools==4.2.4
 certifi==2021.10.8
 cffi==1.15.0
-charset-normalizer==2.0.7
+charset-normaliser==2.0.7
 clang==5.0
 click==8.0.4
 cloudpickle==2.0.0
