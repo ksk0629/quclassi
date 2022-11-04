@@ -172,6 +172,7 @@ class QuClassi():
             raise ValueError(msg)
 
         for epoch in range(1, epochs+1):
+            print(f"================== epoch {epoch} ==================")
 
             # Train each quantum circuits
             for label in self.unique_labels:
@@ -182,7 +183,6 @@ class QuClassi():
                                                    backend=backend, shots=shots, should_normalise=should_normalise,
                                                    should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
 
-            print(f"============ epoch {epoch} evaluation ============")
             # Classify data
             _, probabilities_list = self.classify(data=train_data, backend=backend, shots=shots,
                                                   should_normalise=should_normalise, on_ibmq=on_ibmq)

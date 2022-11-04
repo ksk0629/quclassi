@@ -380,7 +380,7 @@ class QuClassiCircuit():
         self.__label = label
 
         # Print basic information
-        print(f"============ label {self.label}: Start training ============")
+        print(f"label {self.label}: Start training.")
 
         # Train
         for epoch in range(1, epochs+1):
@@ -433,7 +433,6 @@ class QuClassiCircuit():
             if should_save_each_epoch:
                 self.save_parameters_as_json(f"latest_{label}.json")
 
-        print("Successfully trained.")
         print(f"The best loss is {self.best_loss} on {self.best_epochs} epochs.")
 
     def __run_with_building_another_circuit(self, thetas_list, data, backend, shots, on_ibmq) -> float:
