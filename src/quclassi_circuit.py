@@ -205,38 +205,6 @@ class QuClassiCircuit():
         if not is_in_train:
             print("Successfully built.")
 
-    def run(self, backend: str, shots: int, on_ibmq: bool) -> float:
-        """Run the quantum circuit and obtain the fidelity-like value
-        Note that, it is not the exact quantum state fidelity |<x|y>| but (1 + |<x|y>|^2)/2.
-        This output is for comparing two numbers by their size and (1 + k^2)/2 < (1 + l^2)/2 holds for any k < l.
-        Therefore it is not a big problem if either the fidelity-like value or the exact quantum state fidelity is used.
-
-        :param str backend: backend
-        :param int shots: number of executions
-        :param bool on_ibmq: whether or not ibmq is used
-        :raises ValueError: if "0" is not observed
-        :return float fidelity_like: fidelity-like value
-        """
-        # Execute the quantum circuit
-        if on_ibmq:
-            job = qiskit.execute(qiskit.transpile(self.quantum_circuit, backend), backend=backend, shots=shots)
-        else:
-            simulator = qiskit.Aer.get_backend(backend)
-            job = qiskit.execute(self.quantum_circuit, simulator, shots=shots)
-
-        # Get the result
-        result = job.result()
-        counts = result.get_counts(self.quantum_circuit)
-
-        try:
-            fidelity_like = counts["0"] / shots
-        except KeyError:
-            # if there is no observatino '0' in the result
-            msg = "There is no observation '0' in the result of this execution."
-            raise ValueError(msg)
-
-        return fidelity_like
-
     def __add_single_qubit_unitary_layer(self, thetas: List[float]) -> None:
         """Add the single qubit unitary layler into the quantum circuit
 
@@ -315,6 +283,38 @@ class QuClassiCircuit():
             trained_qubit = qubit + 1
             loaded_qubit = trained_qubit + self.num_trained_qubits
             self.quantum_circuit.fredkin(0, trained_qubit, loaded_qubit)
+
+    def run(self, backend: str, shots: int, on_ibmq: bool) -> float:
+        """Run the quantum circuit and obtain the fidelity-like value
+        Note that, it is not the exact quantum state fidelity |<x|y>| but (1 + |<x|y>|^2)/2.
+        This output is for comparing two numbers by their size and (1 + k^2)/2 < (1 + l^2)/2 holds for any k < l.
+        Therefore it is not a big problem if either the fidelity-like value or the exact quantum state fidelity is used.
+
+        :param str backend: backend
+        :param int shots: number of executions
+        :param bool on_ibmq: whether or not ibmq is used
+        :raises ValueError: if "0" is not observed
+        :return float fidelity_like: fidelity-like value
+        """
+        # Execute the quantum circuit
+        if on_ibmq:
+            job = qiskit.execute(qiskit.transpile(self.quantum_circuit, backend), backend=backend, shots=shots)
+        else:
+            simulator = qiskit.Aer.get_backend(backend)
+            job = qiskit.execute(self.quantum_circuit, simulator, shots=shots)
+
+        # Get the result
+        result = job.result()
+        counts = result.get_counts(self.quantum_circuit)
+
+        try:
+            fidelity_like = counts["0"] / shots
+        except KeyError:
+            # if there is no observatino '0' in the result
+            msg = "There is no observation '0' in the result of this execution."
+            raise ValueError(msg)
+
+        return fidelity_like
 
     def load_into_qubits(self, data: List[float]) -> None:
         """Load classical data on the qubits
