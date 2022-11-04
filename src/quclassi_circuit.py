@@ -335,6 +335,7 @@ class QuClassiCircuit():
         :param int num_of_zeros: the number of zeros
         :param int shots: the number of executions
         :raises ValueError: if the fidelity value is negative
+        :raises ValueError: if the fidelity value is inf or NaN
         :return float: the quantum state fidelity
         """
         fidelity_like = self.get_fidelity_like_value(num_of_zeros=num_of_zeros, shots=shots)  # (1 + |<x|y>|^2)/2
@@ -344,6 +345,13 @@ class QuClassiCircuit():
         if fidelity < 0:
             msg = f"The quantum state fidelity must be non-negative," \
                   f"but this is {fidelity}."
+            raise ValueError(msg)
+
+        if np.isinf(fidelity) or np.isnan(fidelity):
+            msg = f"The quantum state fidelity is {fidelity}"
+            print(f"fidelity_like: {fidelity_like}")
+            print(f"fidelity: {fidelity}")
+
             raise ValueError(msg)
 
         return fidelity
