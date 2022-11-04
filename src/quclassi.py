@@ -3,7 +3,9 @@ import json
 import os
 from typing import Dict, List, Optional, Tuple, Union
 
+import mlflow
 import numpy as np
+from tqdm import tqdm
 
 from quclassi_circuit import QuClassiCircuit
 
@@ -76,12 +78,28 @@ class QuClassi():
         return np.min(self.loss_history) if len(self.loss_history) != 0 else None
 
     @property
+    def latest_loss(self) -> float:
+        """Return the latest loss value.
+
+        :return float: the latest loss value
+        """
+        return self.loss_history[-1] if len(self.loss_history) != 0 else None
+
+    @property
     def best_accuracy(self) -> float:
         """Return the best accuracy value.
 
         :return float: the best accuracy value
         """
         return np.max(self.accuracy_history) if len(self.accuracy_history) != 0 else None
+
+    @property
+    def latest_accuracy(self) -> float:
+        """Return the latest accuracy.
+
+        :return float: the latest accuracy
+        """
+        return self.accuracy_history[-1] if len(self.accuracy_history) != 0 else None
 
     def build_quantum_circuits(self, structure: List[str], thetas_lists: Optional[List[List[List[float]]]] = None, seed: int = 0) -> None:
         """Build quantum circuits for each label
@@ -110,45 +128,6 @@ class QuClassi():
             thetas_list = thetas_lists[index]
             self.quantum_circuits[label].build_quantum_circuit(structure=structure, thetas_list=copy.deepcopy(thetas_list), is_in_train=False)
 
-    def train(self, train_data: List[List[float]], train_labels: List[str],
-              epochs: Union[Dict[str, int], int], learning_rate: float, backend: str,
-              shots: int, should_normalise: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
-        """Train the quantum circuits
-
-        :param List[List[float]] train_data: learning data
-        :param List[str] train_labels: training labels
-        :param Union[Dict[str, int], int] epochs: number of epochs
-        :param float learning_rate: learning rate
-        :param str backend: backend
-        :param int shots: number of executions
-        :param bool should_normalise: whether or not normalise each data
-        :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
-        :param bool on_ibmq: whether or not ibmq is used
-        :raises ValueError: if the lengths of the given lables the data are not the same
-        :raises ValueError: if the type of the given epochs is dict and the key is not the same the label
-        """
-        # Check whether the given parameters are valid or not
-        if len(train_data) != len(train_labels):
-            msg = f"len(train_data) must be same as len(train_labels), but {len(train_data)} != {len(train_labels)}"
-            raise ValueError(msg)
-        if type(epochs) is dict:
-            msg = "epochs must be int or dict whose the keys are same as labels of quantum circuits."
-            if set(epochs.keys()) != set(self.unique_labels):
-                raise ValueError(msg)
-        elif type(epochs) is int:
-            epochs_tmp = epochs
-            epochs = {label: epochs_tmp for label in self.unique_labels}
-
-        # Train each quantum circuit
-        for label in self.unique_labels:
-            current_epochs = epochs[label]
-            focused_indices = np.where(np.array(train_labels) == label)[0]
-            focused_train_data = np.array(train_data)[focused_indices]
-            self.quantum_circuits[label].train(focused_train_data, label=label,
-                                               epochs=current_epochs, learning_rate=learning_rate,
-                                               backend=backend, shots=shots, should_normalise=should_normalise,
-                                               should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
-
     def train_and_eval(self, train_data: List[List[float]], train_labels: List[str],
                        dev_data: List[List[float]], dev_label: List[str],
                        epochs: int, learning_rate: float, backend: str,
@@ -171,8 +150,9 @@ class QuClassi():
             msg = f"len(train_data) must be same as len(train_labels), but {len(train_data)} != {len(train_labels)}"
             raise ValueError(msg)
 
-        for epoch in range(1, epochs+1):
-            print(f"================== epoch {epoch} ==================")
+        tqdm_epochs = tqdm(range(1, epochs+1))
+        for epoch in tqdm_epochs:
+            tqdm_epochs.set_postfix({"Loss_train": self.latest_loss, "Accuracy_val": self.latest_accuracy})
 
             # Train each quantum circuits
             for label in self.unique_labels:
@@ -190,11 +170,7 @@ class QuClassi():
             # Calculate the crossentropy between predicions and truths
             current_loss = self.calculate_cross_entropy_error(probabilities_list=probabilities_list, true_labels=train_labels)
 
-            # Print loss information
-            if self.best_loss is None or current_loss < self.best_loss:
-                print(f"\tloss = {current_loss} <- the best loss ever")
-            else:
-                print(f"\tloss = {current_loss}")
+            mlflow.log_metric(f"train_crros_entropy_loss", current_loss, step=epoch)
 
             self.loss_history.append(current_loss)
 
@@ -202,10 +178,7 @@ class QuClassi():
                                              backend=backend, shots=shots,
                                              should_normalise=should_normalise, on_ibmq=on_ibmq)
 
-            if self.best_accuracy is None or current_accuracy < self.best_accuracy:
-                print(f"\taccuracy = {current_accuracy} <- the best accuracy ever")
-            else:
-                print(f"\taccuracy = {current_accuracy}")
+            mlflow.log_metric(f"dev_accuracy", current_accuracy, step=epoch)
 
             self.accuracy_history.append(current_accuracy)
 
@@ -284,8 +257,7 @@ class QuClassi():
         # Evaluate each circuit
         total_correct = 0
         total_wrong = 0
-        for label in self.unique_labels:
-            print(f"label {label}: Start evaluating")
+        for label in tqdm(self.unique_labels, desc="[Evaluating]", leave=False):
             focused_indices = np.where(np.array(true_labels) == label)[0]
             focused_data = data[focused_indices]
             focused_true_labels = np.array(true_labels)[focused_indices]
@@ -299,22 +271,12 @@ class QuClassi():
                     correct += 1
                 else:
                     wrong += 1
-            accuracy = correct / (correct + wrong) * 100
-
-            # Print the resutls
-            print(f"the number of correct classified_labels is {correct}")
-            print(f"the number of wrong classified_labels is {wrong}")
-            print(f"the accuracy is {accuracy} [%]")
 
             total_correct += correct
             total_wrong += wrong
 
-        # Print the final results
+        # Get the total accuracy
         total_accuracy = total_correct / (total_correct + total_wrong) * 100
-        print("=== FINAL RESULT ===")
-        print(f"the number of correct classified_labels is {total_correct}")
-        print(f"the number of wrong classified_labels is {total_wrong}")
-        print(f"the accuracy is {total_accuracy} [%]")
 
         return total_accuracy
 

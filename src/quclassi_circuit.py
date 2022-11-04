@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from typing import List, Optional, Union
 
+import mlflow
 import numpy as np
 from tqdm import tqdm
 import qiskit
@@ -334,6 +335,7 @@ class QuClassiCircuit():
         :param int num_of_zeros: the number of zeros
         :param int shots: the number of executions
         :raises ValueError: if the fidelity value is negative
+        :raises ValueError: if the fidelity value is inf or NaN
         :return float: the quantum state fidelity
         """
         fidelity_like = self.get_fidelity_like_value(num_of_zeros=num_of_zeros, shots=shots)  # (1 + |<x|y>|^2)/2
@@ -343,6 +345,13 @@ class QuClassiCircuit():
         if fidelity < 0:
             msg = f"The quantum state fidelity must be non-negative," \
                   f"but this is {fidelity}."
+            raise ValueError(msg)
+
+        if np.isinf(fidelity) or np.isnan(fidelity):
+            msg = f"The quantum state fidelity is {fidelity}"
+            print(f"fidelity_like: {fidelity_like}")
+            print(f"fidelity: {fidelity}")
+
             raise ValueError(msg)
 
         return fidelity
@@ -379,15 +388,10 @@ class QuClassiCircuit():
         # Store the given label into a class variable
         self.__label = label
 
-        # Print basic information
-        print(f"label {self.label}: Start training.")
-
         # Train
         for epoch in range(1, epochs+1):
-            print(f"epoch {epoch}: ", end="")
-
             total_loss_over_epochs = 0
-            for vector in tqdm(prepared_data):
+            for vector in tqdm(prepared_data, desc=f"[Label {label} training]", leave=False):
 
                 total_loss = 0
                 for first_theta_index, thetas in enumerate(self.thetas_list):  # for each layer
@@ -423,17 +427,12 @@ class QuClassiCircuit():
 
             # Update learning information in class variables
             total_loss_over_epochs = len(data) - total_loss_over_epochs
+            mlflow.log_metric(f"train_{label}_loss", total_loss_over_epochs, step=epoch)
             self.__loss_history.append(total_loss_over_epochs)
             self.__epochs += 1
-            if len(self.loss_history) == 1 or total_loss_over_epochs < self.best_loss:
-                print(f"\tloss = {total_loss_over_epochs} <- the best loss ever")
-            else:
-                print(f"\tloss = {total_loss_over_epochs}")
 
             if should_save_each_epoch:
                 self.save_parameters_as_json(f"latest_{label}.json")
-
-        print(f"The best loss is {self.best_loss} on {self.best_epochs} epochs.")
 
     def __run_with_building_another_circuit(self, thetas_list, data, backend, shots, on_ibmq) -> float:
         another_quclassi = QuClassiCircuit(self.modified_input_size)
