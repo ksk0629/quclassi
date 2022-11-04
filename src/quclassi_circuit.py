@@ -241,7 +241,7 @@ class QuClassiCircuit():
         for basis_qubit, theta in enumerate(thetas, 1):
             theta_y, theta_z = theta
 
-            partner_qubits = np.arange(basis_qubit, self.num_trained_qubits+1)
+            partner_qubits = np.arange(basis_qubit+1, self.num_trained_qubits+1)
             for partner_qubit in partner_qubits:
                 self.quantum_circuit.ryy(theta=theta_y, qubit1=basis_qubit, qubit2=partner_qubit)
                 self.quantum_circuit.rzz(theta=theta_z, qubit1=basis_qubit, qubit2=partner_qubit)
@@ -280,7 +280,7 @@ class QuClassiCircuit():
         """Add the controlled swap into the quantum circuit.
         """
         # Add the cswap gate (Fredkin gate) into the quantum circuit
-        for trained_qubit in range(self.num_trained_qubits, 1):
+        for trained_qubit in range(1, self.num_trained_qubits+1):
             loaded_qubit = trained_qubit + self.num_trained_qubits
             self.quantum_circuit.fredkin(0, trained_qubit, loaded_qubit)
 
