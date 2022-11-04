@@ -12,7 +12,6 @@ train:
   learning_rate: 0.01
   backend: qasm_simulator
   shots: 8000
-  should_show: False
   should_normalize: True
   should_save_each_epoch: False
   on_ibmq: False

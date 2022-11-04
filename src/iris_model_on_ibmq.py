@@ -86,7 +86,7 @@ def set_epochs(quclassi_object: QuClassi, objective_epochs: int) -> Dict[str, in
 
 def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size: float, should_scale: bool,
                                     structure: str, epochs: int, learning_rate: float, backend: str, shots: int,
-                                    should_normalize: bool, should_show: bool, should_save_each_epoch: bool) -> Tuple[QuClassi, float, Tuple[time.time, time.time]]:
+                                    should_normalize: bool, should_save_each_epoch: bool) -> Tuple[QuClassi, float, Tuple[time.time, time.time]]:
     """Train and evaluate QuClassi with the iris dataset on IBMQ
 
     :param int random_state: random seed
@@ -99,7 +99,6 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
     :param str backend: backend
     :param int shots: number of executions
     :param bool should_normalize: whether or not normalise each data
-    :param bool should_show: whether or not print learning process
     :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
     :return QuClassi quclassi: Trained QuClassi
     :return float accuracy: accuracy
@@ -137,7 +136,7 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
         quclassi.train(x_train, y_train,
                        epochs=epochs_dict, learning_rate=learning_rate,
                        backend=backend, shots=shots, should_normalize=should_normalize,
-                       should_show=should_show, should_save_each_epoch=should_save_each_epoch, on_ibmq=True)
+                       should_save_each_epoch=should_save_each_epoch, on_ibmq=True)
     train_time = time.time() - start_time
     print("Training is done.")
 

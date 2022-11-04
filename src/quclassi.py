@@ -72,7 +72,7 @@ class QuClassi():
 
     def train(self, train_data: List[List[float]], train_labels: List[str],
               epochs: Union[Dict[str, int], int], learning_rate: float, backend: str,
-              shots: int, should_normalize: bool, should_show: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
+              shots: int, should_normalize: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train the quantum circuits
 
         :param List[List[float]] train_data: learning data
@@ -82,7 +82,6 @@ class QuClassi():
         :param str backend: backend
         :param int shots: number of executions
         :param bool should_normalize: whether or not normalise each data
-        :param bool should_show: whether or not print learning process
         :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
         :param bool on_ibmq: whether or not ibmq is used
         :raises ValueError: if the lengths of the given lables the data are not the same
@@ -107,13 +106,13 @@ class QuClassi():
             focused_train_data = np.array(train_data)[focused_indices]
             self.quantum_circuits[label].train(focused_train_data, label=label,
                                                epochs=current_epochs, learning_rate=learning_rate,
-                                               backend=backend, shots=shots, should_normalize=should_normalize, should_show=should_show,
+                                               backend=backend, shots=shots, should_normalize=should_normalize,
                                                should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
 
     def train_and_eval(self, train_data: List[List[float]], train_labels: List[str],
                        dev_data: List[List[float]], dev_label: List[str],
                        epochs: int, learning_rate: float, backend: str,
-                       shots: int, should_normalize: bool, should_show: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
+                       shots: int, should_normalize: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train and evaluate all quantum circuits
 
         :param List[List[float]] train_data: learning data
@@ -123,7 +122,6 @@ class QuClassi():
         :param str backend: backend
         :param int shots: number of executions
         :param bool should_normalize: whether or not normalise each data
-        :param bool should_show: whether or not print learning process
         :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
         :param bool on_ibmq: whether or not ibmq is used
         :raises ValueError: if the lengths of the given lables the data are not the same
@@ -141,7 +139,7 @@ class QuClassi():
                 focused_train_data = np.array(train_data)[focused_indices]
                 self.quantum_circuits[label].train(focused_train_data, label=label,
                                                    epochs=1, learning_rate=learning_rate,
-                                                   backend=backend, shots=shots, should_normalize=should_normalize, should_show=should_show,
+                                                   backend=backend, shots=shots, should_normalize=should_normalize,
                                                    should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
 
             print(f"============ epoch {epoch} evaluation ============")

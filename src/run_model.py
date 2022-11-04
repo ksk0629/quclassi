@@ -38,7 +38,7 @@ def preprocess_dataset(data: List[List[float]], labels: List[str], random_state:
 def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
                        random_state: int, shuffle: bool, train_size: float, should_scale: bool,
                        structure: str, epochs: int, learning_rate: float, backend: str, shots: int,
-                       should_normalize: bool, should_show: bool, should_save_each_epoch: bool,
+                       should_normalize: bool, should_save_each_epoch: bool,
                        on_ibmq: bool) -> Tuple[object, time.time]:
     """Train and evaluate QuClassi
 
@@ -55,7 +55,6 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
     :param str backend: backend
     :param int shots: number of executions
     :param bool should_normalize: whether or not normalise each data
-    :param bool should_show: whether or not print learning process
     :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
     :param bool on_ibmq: whether or not ibmq is used
     :return QuClassi quclassi: trained quclassi object
@@ -77,7 +76,7 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
     quclassi.train_and_eval(x_train, y_train, x_test, y_test,
                             epochs=epochs, learning_rate=learning_rate,
                             backend=backend, shots=shots, should_normalize=should_normalize,
-                            should_show=should_show, should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
+                            should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
     process_time = time.time() - start_time
     print("Training and evaluating is done.")
 

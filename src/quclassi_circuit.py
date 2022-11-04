@@ -1,9 +1,10 @@
 import copy
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
+from tqdm import tqdm
 import qiskit
 
 
@@ -346,8 +347,105 @@ class QuClassiCircuit():
 
         return fidelity
 
-    def load_into_qubits(self, data: List[float]) -> None:
-        """Load classical data on the qubits
+    def draw(self) -> Optional[object]:
+        """Visualise the quantum circuit.
+
+        This function returns figure if matplotlib is available otherwise prints the quantum circuit to the standard output.
+
+        :return Optional[object]: matplotlib.figure.Figure if matplotlib is available
+        """
+        try:
+            return self.quantum_circuit.draw("mpl")
+        except:
+            print(self.quantum_circuit.draw())
+
+    def train(self, data: List[List[float]], label: str, epochs: int, learning_rate: float, backend: str, shots: int,
+              should_normalize: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
+        """Train the quantum circuit.
+
+        :param List[List[float]] data: training data
+        :param str label: training label
+        :param int epochs: number of epochs
+        :param float learning_rate: learning rate
+        :param str backend: backend
+        :param int shots: number of executions
+        :param bool should_normalize: whether or not normalise each data
+        :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
+        :param bool on_ibmq: whether or not ibmq is used
+        """
+        # Prepare the data
+        prepared_data = self.normalize_data(data) if should_normalize else data.copy()
+
+        # Store the given label into a class variable
+        self.__label = label
+
+        # Print basic information
+        print(f"============ label {self.label}: Start training ============")
+
+        # Train
+        for epoch in range(1, epochs+1):
+            print(f"epoch {epoch}: ", end="")
+
+            total_loss_over_epochs = 0
+            for vector in tqdm(prepared_data):
+
+                total_loss = 0
+                for first_theta_index, thetas in enumerate(self.thetas_list):  # for each layer
+                    for second_theta_index, theta_yz in enumerate(thetas):  # for each quantum gate for the representative quantum state
+                        for third_theta_index in range(len(theta_yz)):  # for each rotation angle
+                            # Calculate the quantum fidelity-like value of the foward state
+                            forward_thetas_list = copy.deepcopy(self.thetas_list)
+                            forward_thetas_list[first_theta_index][second_theta_index][third_theta_index] += np.pi / (2 * np.sqrt(epoch))
+                            forward_fidelity = self.run_with_building_another_circuit(thetas_list=forward_thetas_list, data=vector,
+                                                                                      backend=backend, shots=shots, on_ibmq=on_ibmq)
+
+                            # Calculate the quantum fidelity-like value of the backward state
+                            backward_thetas_list = copy.deepcopy(self.thetas_list)
+                            backward_thetas_list[first_theta_index][second_theta_index][third_theta_index] -= np.pi / (2 * np.sqrt(epoch))
+                            backward_fidelity = self.run_with_building_another_circuit(thetas_list=backward_thetas_list, data=vector,
+                                                                                       backend=backend, shots=shots, on_ibmq=on_ibmq)
+
+                            # Calculate the loss value
+                            self.__load_into_qubits(vector)
+                            loss = self.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
+                            total_loss += loss
+
+                            # Update the parameter
+                            update_term = -0.5 * (np.log(forward_fidelity) - np.log(backward_fidelity))
+                            self.thetas_list[first_theta_index][second_theta_index][third_theta_index] -= learning_rate * update_term
+
+                            # Reconstruce the quantum circuit with updated parameters
+                            # This step is not needed if the loss value is not needed
+                            self.quantum_circuit.data = []
+                            self.build_quantum_circuit(self.structure, self.thetas_list, is_in_train=True)
+
+                total_loss_over_epochs += total_loss / self.num_thetas
+
+            # Update learning information in class variables
+            total_loss_over_epochs = len(data) - total_loss_over_epochs
+            self.__loss_history.append(total_loss_over_epochs)
+            self.__epochs += 1
+            if len(self.loss_history) == 1 or total_loss_over_epochs < self.best_loss:
+                print(f"\tloss = {total_loss_over_epochs} <- the best loss ever")
+            else:
+                print(f"\tloss = {total_loss_over_epochs}")
+
+            if should_save_each_epoch:
+                self.save_parameters_as_json(f"latest_{label}.json")
+
+        print("Successfully trained.")
+        print(f"The best loss is {self.best_loss} on {self.best_epochs} epochs")
+
+    def run_with_building_another_circuit(self, thetas_list, data, backend, shots, on_ibmq) -> float:
+        another_quclassi = QuClassiCircuit(self.modified_input_size)
+        another_quclassi.build_quantum_circuit(self.structure, thetas_list, is_in_train=True)                        
+        another_quclassi.__load_into_qubits(data)
+        fidelity = another_quclassi.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
+
+        return fidelity
+
+    def __load_into_qubits(self, data: List[float]) -> None:
+        """Load classical data on the qubits.
 
         :param List[float] data: classical data
         :raises ValueError: if the dimension of the given classical data is not the same as the input size of the quantum circuit
@@ -373,108 +471,6 @@ class QuClassiCircuit():
                 gate_information[0]._params = [thetas[theta_count]]
                 theta_count += 1
 
-    def draw(self) -> Optional[object]:
-        """Visualise the quantum circuit
-        Return Figure if matplotlib is available otherwise print it to the standard output.
-
-        :return Optional[object]: matplotlib.figure.Figure if matplotlib is available
-        """
-        try:
-            return self.quantum_circuit.draw("mpl")
-        except:
-            print(self.quantum_circuit.draw())
-
-    def train(self, data: List[List[float]], label: str, epochs: int, learning_rate: float, backend: str, shots: int,
-              should_normalize: bool, should_show: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
-        """Train the quantum circuit
-
-        :param List[List[float]] data: learning data
-        :param str label: training label
-        :param int epochs: number of epochs
-        :param float learning_rate: learning rate
-        :param str backend: backend
-        :param int shots: number of executions
-        :param bool should_normalize: whether or not normalise each data
-        :param bool should_show: whether or not print learning process
-        :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
-        :param bool on_ibmq: whether or not ibmq is used
-        """
-        # Prepare the data
-        prepared_data = self.normalize_data(data) if should_normalize else data.copy()
-
-        # Store the given label into a class variable
-        self.__label = label
-
-        duration = len(data) // 10
-
-        # Print basic information
-        print(f"============ label {self.label}: Start training ============")
-        print(f"the number of epochs is {epochs}")
-        print(f"the number of data is {len(data)}")
-        print(f"the number of thetas is {self.num_thetas}")
-        print(f"the number of iterations per epoch is {len(data)} * {self.num_thetas} = {len(data) * self.num_thetas}")
-        print(f"the number of all iterations is {epochs} * {len(data)} * {self.num_thetas} = {epochs * len(data) * self.num_thetas}")
-
-        # Train
-        for epoch in range(1, epochs+1):
-            print(f"epoch {epoch}: ", end="")
-
-            total_loss_over_epochs = 0
-            for data_index, vector in enumerate(prepared_data):
-
-                total_loss = 0
-                for first_theta_index, thetas in enumerate(self.thetas_list):  # for each layer
-                    for second_theta_index, theta_yz in enumerate(thetas):  # for each quantum gate for the representative quantum state
-                        for third_theta_index in range(len(theta_yz)):  # for each rotation angle
-                            # Calculate the quantum fidelity-like value of the foward state
-                            forward_quclassi = QuClassiCircuit(self.modified_input_size)
-                            forward_thetas_list = copy.deepcopy(self.thetas_list)
-                            forward_thetas_list[first_theta_index][second_theta_index][third_theta_index] += np.pi / (2 * np.sqrt(epoch))
-                            forward_quclassi.build_quantum_circuit(self.structure, forward_thetas_list, is_in_train=True)                        
-                            forward_quclassi.load_into_qubits(vector)
-                            forward_fidelity_like = forward_quclassi.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
-
-                            # Calculate the quantum fidelity-like value of the backward state
-                            backward_quclassi = QuClassiCircuit(self.modified_input_size)
-                            backward_thetas_list = copy.deepcopy(self.thetas_list)
-                            backward_thetas_list[first_theta_index][second_theta_index][third_theta_index] -= np.pi / (2 * np.sqrt(epoch))
-                            backward_quclassi.build_quantum_circuit(self.structure, backward_thetas_list, is_in_train=True)
-                            backward_quclassi.load_into_qubits(vector)
-                            backward_fidelity_like = backward_quclassi.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
-
-                            # Calculate the loss value
-                            self.load_into_qubits(vector)
-                            loss = self.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
-                            total_loss += loss
-
-                            # Update the parameter
-                            update_term = -0.5 * (np.log(forward_fidelity_like) - np.log(backward_fidelity_like))
-                            self.thetas_list[first_theta_index][second_theta_index][third_theta_index] -= learning_rate * update_term
-
-                            # Reconstruce the quantum circuit with updated parameters
-                            # This step is not needed if the loss value is not needed
-                            self.quantum_circuit.data = []
-                            self.build_quantum_circuit(self.structure, self.thetas_list, is_in_train=True)
-
-                if should_show and (data_index+1) % duration == 0:
-                    print(f"\tCompleted training {data_index+1} data")
-
-                total_loss_over_epochs += total_loss / self.num_thetas
-
-            # Update learning information in class variables
-            total_loss_over_epochs = len(data) - total_loss_over_epochs
-            self.__loss_history.append(total_loss_over_epochs)
-            self.__epochs += 1
-            if len(self.loss_history) == 1 or total_loss_over_epochs < self.best_loss:
-                print(f"\tloss = {total_loss_over_epochs} <- the best loss ever")
-            else:
-                print(f"\tloss = {total_loss_over_epochs}")
-
-            if should_save_each_epoch:
-                self.save_parameters_as_json(f"latest_{label}.json")
-
-        print("Successfully trained.")
-        print(f"The best loss is {self.best_loss} on {self.best_epochs} epochs")
 
     def normalize_data(self, data: List[List[float]]) -> np.array:
         """Normalise data
@@ -563,7 +559,7 @@ class QuClassiCircuit():
 
         likelihoods = []
         for vector in prepared_data:
-            self.load_into_qubits(vector)
+            self.__load_into_qubits(vector)
             fidelity_like = self.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
 
             likelihoods.append(fidelity_like)
