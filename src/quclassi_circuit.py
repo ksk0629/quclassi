@@ -459,7 +459,8 @@ class QuClassiCircuit():
 
         # Check whether the given thetas is valid or not
         if len(thetas) != self.modified_input_size:
-            mag = f"The length of data and self.modified_input_size must be same,\nbut the length is {len(thetas)} and self.modified_input_size is {self.modified_input_size}"
+            msg = f"The length of the given data and self.modified_input_size must be same\n" \
+                  f"but the length is {len(thetas)} and self.modified_input_size is {self.modified_input_size}"
             raise ValueError(msg)
 
         theta_count = 0
