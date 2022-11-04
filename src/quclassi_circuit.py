@@ -29,6 +29,8 @@ class QuClassiCircuit():
         self.__loss_history = []
         self.__epochs = 0
         self.__label = None
+        self.__structure = None
+        self.__thetas_list = []
 
         # Generate a quantum circuit
         self.__control_quantum_register = qiskit.QuantumRegister(1, name="control_qubit")
@@ -92,22 +94,46 @@ class QuClassiCircuit():
     @property
     def control_quantum_register(self) -> qiskit.QuantumRegister:
         return self.__control_quantum_register
-    
+
     @property
     def trained_quantum_register(self) -> qiskit.QuantumRegister:
         return self.__trained_quantum_register
-    
+
     @property
     def loaded_quantum_register(self) -> qiskit.QuantumRegister:
         return self.__loaded_quantum_register
-    
+
     @property
     def classical_register(self) -> qiskit.ClassicalRegister:
         return self.__classical_register
-    
+
     @property
     def quantum_circuit(self) -> qiskit.QuantumCircuit:
         return self.__quantum_circuit
+
+    @property
+    def structure(self) -> str:
+        """Return the structure of the quantum circiut.
+
+        :return str: the structure of the quantum circuit
+        """
+        return self.__structure
+
+    @property
+    def thetas_list(self) -> List[float]:
+        """Return the rotation angles.
+
+        :return List[float]: the rotation angles
+        """
+        return self.__thetas_list
+
+    @property
+    def num_thetas(self) -> int:
+        """Return the number of the rotation angles.
+
+        :return int: the number of the rotation angles
+        """
+        return sum([len(np.array(thetas).reshape(-1)) for thetas in self.thetas_list])
 
     @property
     def best_loss(self) -> float:
@@ -139,10 +165,14 @@ class QuClassiCircuit():
         num_d = structure.count('d')
         num_c = structure.count('c')
         if num_s + num_d + num_c != len(structure):
-            msg = f"structure must have only 's', 'd', and 'c', but this structure is {structure}"
+            msg = f"A given structure must have only 's', 'd' and 'c'," \
+                  f"but this one is '{structure}'."
             raise ValueError(msg)
         if len(structure) != len(thetas_list):
-            msg = f"length of structure must equal to length of thetas_list,\nbut len(structure) = {len(structure)} and len(thetas_list) = {len(thetas_list)}"
+            msg = f"The length of a given structure must equal to" \
+                  f"the length of a given thetas_list,\n" \
+                  f"but len(structure) = {len(structure)} and" \
+                  f"len(thetas_list) = {len(thetas_list)}."
             raise ValueError(msg)
 
         # Prepare the Hadamard gate in order to perform the SWAP test
@@ -152,24 +182,23 @@ class QuClassiCircuit():
         # Prepare quantum gates in order to generate the representative quantum state
         for letter, thetas in zip(structure, thetas_list):
             if letter == 's':
-                self.add_single_qubit_unitary_layer(thetas)
+                self.__add_single_qubit_unitary_layer(thetas)
             elif letter == 'd':
-                self.add_dual_qubit_unitary_layer(thetas)
+                self.__add_dual_qubit_unitary_layer(thetas)
             elif letter == 'c':
-                self.add_controlled_qubit_unitary_layer(thetas)
+                self.__add_controlled_qubit_unitary_layer(thetas)
 
             self.quantum_circuit.barrier()
 
         # Store the information into class variables
-        self.structure = structure
-        self.thetas_list = thetas_list
-        self.num_thetas = sum([len(np.array(thetas).reshape(-1)) for thetas in self.thetas_list])
+        self.__structure = structure
+        self.__thetas_list = thetas_list
 
         # Prepare quantum gates in order to load data
-        self.add_load_structure()
+        self.__add_load_structure()
 
         # Prepare the cswap gates, the Hadamard gate and the measurement in order to perform the SWAP test
-        self.add_cswap()
+        self.__add_cswap()
         self.quantum_circuit.h(0)
         self.quantum_circuit.measure(0, 0)
 
@@ -208,7 +237,7 @@ class QuClassiCircuit():
 
         return fidelity_like
 
-    def add_single_qubit_unitary_layer(self, thetas: List[float]) -> None:
+    def __add_single_qubit_unitary_layer(self, thetas: List[float]) -> None:
         """Add the single qubit unitary layler into the quantum circuit
 
         :param List[float] thetas: rotation angles
@@ -226,7 +255,7 @@ class QuClassiCircuit():
             self.quantum_circuit.ry(qubit=qubit, theta=theta_y)
             self.quantum_circuit.rz(qubit=qubit, phi=theta_z)
 
-    def add_dual_qubit_unitary_layer(self, thetas: List[float]) -> None:
+    def __add_dual_qubit_unitary_layer(self, thetas: List[float]) -> None:
         """Add the dual qubit unitary layer into the quantum circuit
 
         :param List[float] thetas: rotation angles
@@ -248,7 +277,7 @@ class QuClassiCircuit():
                 self.quantum_circuit.ryy(theta=theta_y, qubit1=basis_qubit, qubit2=partner_qubit)
                 self.quantum_circuit.rzz(theta=theta_z, qubit1=basis_qubit, qubit2=partner_qubit)
 
-    def add_controlled_qubit_unitary_layer(self, thetas: List[float]) -> None:
+    def __add_controlled_qubit_unitary_layer(self, thetas: List[float]) -> None:
         """Add the controlled qubit unitary layer into the quantum circuit
 
         :param List[float] thetas: rotation angles
@@ -266,7 +295,7 @@ class QuClassiCircuit():
             self.quantum_circuit.cry(theta=theta_y, control_qubit=0, target_qubit=qubit)
             self.quantum_circuit.crz(theta=theta_z, control_qubit=0, target_qubit=qubit)
 
-    def add_load_structure(self) -> None:
+    def __add_load_structure(self) -> None:
         """Add gates for loading data into the quantum cirucit
         """
         thetas = np.array([0, 0] * self.num_trained_qubits).reshape(-1, 2)
@@ -278,7 +307,7 @@ class QuClassiCircuit():
             self.quantum_circuit.ry(qubit=qubit, theta=theta_y)
             self.quantum_circuit.rz(qubit=qubit, phi=theta_z)
 
-    def add_cswap(self) -> None:
+    def __add_cswap(self) -> None:
         """Add the controlled swap into the quantum circuit
         """
         # Add the cswap gate (Fredkin gate) into the quantum circuit
