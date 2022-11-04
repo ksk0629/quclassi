@@ -340,7 +340,10 @@ class QuClassiCircuit():
         """
         fidelity_like = self.get_fidelity_like_value(num_of_zeros=num_of_zeros, shots=shots)  # (1 + |<x|y>|^2)/2
         squared_fidelity = fidelity_like * 2 - 1  # |<x|y>|^2
-        fidelity = np.sqrt(squared_fidelity)  # |<x|y>|
+        if squared_fidelity > 0:
+            fidelity = np.sqrt(squared_fidelity)  # |<x|y>|
+        else:
+            fidelity = 0
 
         if fidelity < 0:
             msg = f"The quantum state fidelity must be non-negative," \
@@ -350,6 +353,7 @@ class QuClassiCircuit():
         if np.isinf(fidelity) or np.isnan(fidelity):
             msg = f"The quantum state fidelity is {fidelity}"
             print(f"fidelity_like: {fidelity_like}")
+            print(f"squared_fidelity: {squared_fidelity}")
             print(f"fidelity: {fidelity}")
 
             raise ValueError(msg)
