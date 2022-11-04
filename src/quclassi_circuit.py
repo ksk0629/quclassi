@@ -5,6 +5,7 @@ from typing import List, Optional, Union
 
 import mlflow
 import numpy as np
+from tqdm import tqdm
 import qiskit
 
 
@@ -381,10 +382,8 @@ class QuClassiCircuit():
 
         # Train
         for epoch in range(1, epochs+1):
-            print(f"epoch {epoch}: ", end="")
-
             total_loss_over_epochs = 0
-            for vector in prepared_data:
+            for vector in tqdm(prepared_data, desc=f"[Label {label} training]", leave=False):
 
                 total_loss = 0
                 for first_theta_index, thetas in enumerate(self.thetas_list):  # for each layer
