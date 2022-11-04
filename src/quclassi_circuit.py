@@ -486,13 +486,14 @@ class QuClassiCircuit():
         return data_normalised
 
     def save_parameters_as_json(self, output_path: str) -> None:
-        """Save the quantum circuit information in json
+        """Save the quantum circuit information in json.
 
         :param str output_path: output path
         :raises ValueError: if the extension of the given output_path is not .json
         """
         if ".json" != Path(output_path).suffix:
-            msg = f"The suffix of output_path must be .json, but this output_path is {output_path}"
+            msg = f"The suffix of output_path must be .json" \
+                  f"but this output_path is {output_path}."
             raise ValueError(msg)
 
         model_information = dict()
@@ -526,7 +527,8 @@ class QuClassiCircuit():
         :raises ValueError: if the extension of the model_path is not .json
         """
         if ".json" != Path(model_path).suffix:
-            msg = f"The suffix of model_path must be .json, but this model_path is {model_path}"
+            msg = f"The suffix of model_path must be .json" \
+                  f"but this model_path is {model_path}."
             raise ValueError(msg)
 
         with open(model_path) as model_file:
