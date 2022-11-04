@@ -78,12 +78,28 @@ class QuClassi():
         return np.min(self.loss_history) if len(self.loss_history) != 0 else None
 
     @property
+    def latest_loss(self) -> float:
+        """Return the latest loss value.
+
+        :return float: the latest loss value
+        """
+        return self.loss_history[-1] if len(self.loss_history) != 0 else None
+
+    @property
     def best_accuracy(self) -> float:
         """Return the best accuracy value.
 
         :return float: the best accuracy value
         """
         return np.max(self.accuracy_history) if len(self.accuracy_history) != 0 else None
+
+    @property
+    def latest_accuracy(self) -> float:
+        """Return the latest accuracy.
+
+        :return float: the latest accuracy
+        """
+        return self.accuracy_history[-1] if len(self.accuracy_history) != 0 else None
 
     def build_quantum_circuits(self, structure: List[str], thetas_lists: Optional[List[List[List[float]]]] = None, seed: int = 0) -> None:
         """Build quantum circuits for each label
@@ -134,7 +150,9 @@ class QuClassi():
             msg = f"len(train_data) must be same as len(train_labels), but {len(train_data)} != {len(train_labels)}"
             raise ValueError(msg)
 
-        for epoch in tqdm(range(1, epochs+1)):
+        tqdm_epochs = tqdm(range(1, epochs+1))
+        for epoch in tqdm_epochs:
+            tqdm_epochs.set_postfix({"Loss_train": self.latest_loss, "Accuracy_val": self.latest_accuracy})
 
             # Train each quantum circuits
             for label in self.unique_labels:
