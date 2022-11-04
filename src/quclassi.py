@@ -111,45 +111,6 @@ class QuClassi():
             thetas_list = thetas_lists[index]
             self.quantum_circuits[label].build_quantum_circuit(structure=structure, thetas_list=copy.deepcopy(thetas_list), is_in_train=False)
 
-    def train(self, train_data: List[List[float]], train_labels: List[str],
-              epochs: Union[Dict[str, int], int], learning_rate: float, backend: str,
-              shots: int, should_normalise: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
-        """Train the quantum circuits
-
-        :param List[List[float]] train_data: learning data
-        :param List[str] train_labels: training labels
-        :param Union[Dict[str, int], int] epochs: number of epochs
-        :param float learning_rate: learning rate
-        :param str backend: backend
-        :param int shots: number of executions
-        :param bool should_normalise: whether or not normalise each data
-        :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
-        :param bool on_ibmq: whether or not ibmq is used
-        :raises ValueError: if the lengths of the given lables the data are not the same
-        :raises ValueError: if the type of the given epochs is dict and the key is not the same the label
-        """
-        # Check whether the given parameters are valid or not
-        if len(train_data) != len(train_labels):
-            msg = f"len(train_data) must be same as len(train_labels), but {len(train_data)} != {len(train_labels)}"
-            raise ValueError(msg)
-        if type(epochs) is dict:
-            msg = "epochs must be int or dict whose the keys are same as labels of quantum circuits."
-            if set(epochs.keys()) != set(self.unique_labels):
-                raise ValueError(msg)
-        elif type(epochs) is int:
-            epochs_tmp = epochs
-            epochs = {label: epochs_tmp for label in self.unique_labels}
-
-        # Train each quantum circuit
-        for label in self.unique_labels:
-            current_epochs = epochs[label]
-            focused_indices = np.where(np.array(train_labels) == label)[0]
-            focused_train_data = np.array(train_data)[focused_indices]
-            self.quantum_circuits[label].train(focused_train_data, label=label,
-                                               epochs=current_epochs, learning_rate=learning_rate,
-                                               backend=backend, shots=shots, should_normalise=should_normalise,
-                                               should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
-
     def train_and_eval(self, train_data: List[List[float]], train_labels: List[str],
                        dev_data: List[List[float]], dev_label: List[str],
                        epochs: int, learning_rate: float, backend: str,
