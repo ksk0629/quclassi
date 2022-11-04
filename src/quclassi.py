@@ -177,6 +177,8 @@ class QuClassi():
             mlflow.log_metric(f"train_crros_entropy_loss", current_loss, step=epoch)
             self.loss_history.append(current_loss)
 
+            previous_best_accuracy = self.best_accuracy
+
             # Calculate and register the accuracy
             current_accuracy = self.evaluate(data=dev_data, true_labels=dev_label,
                                              backend=backend, shots=shots,
@@ -186,13 +188,13 @@ class QuClassi():
 
             # Check if early stopping should work
             if patience > 0:
-                if self.best_accuracy != self.latest_accuracy:
+                if previous_best_accuracy is not None and previous_best_accuracy >= self.latest_accuracy:
                     current_patience += 1
                 else:
                     current_patience = 0
 
                 if current_patience == patience:
-                    print("Early stopping works.")
+                    print("\nEarly stopping works.")
                     break
 
     def calculate_cross_entropy_error(self, probabilities_list: List[List[float]], true_labels: List[str]) -> float:
