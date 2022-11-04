@@ -360,7 +360,7 @@ class QuClassiCircuit():
             print(self.quantum_circuit.draw())
 
     def train(self, data: List[List[float]], label: str, epochs: int, learning_rate: float, backend: str, shots: int,
-              should_normalize: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
+              should_normalise: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train the quantum circuit.
 
         :param List[List[float]] data: training data
@@ -369,12 +369,12 @@ class QuClassiCircuit():
         :param float learning_rate: learning rate
         :param str backend: backend
         :param int shots: number of executions
-        :param bool should_normalize: whether or not normalise each data
+        :param bool should_normalise: whether or not normalise each data
         :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
         :param bool on_ibmq: whether or not ibmq is used
         """
         # Prepare the data
-        prepared_data = self.normalize_data(data) if should_normalize else data.copy()
+        prepared_data = self.normalise_data(data) if should_normalise else data.copy()
 
         # Store the given label into a class variable
         self.__label = label
@@ -472,19 +472,18 @@ class QuClassiCircuit():
                 gate_information[0]._params = [thetas[theta_count]]
                 theta_count += 1
 
-
-    def normalize_data(self, data: List[List[float]]) -> np.array:
-        """Normalise data
+    def normalise_data(self, data: List[List[float]]) -> np.array:
+        """Normalise data.
 
         :param List[List[float]] data: classical data
-        :return numpy.array data_normalized: normalised classical data
+        :return numpy.array data_normalised: normalised classical data
         """
-        data_normalized = []
+        data_normalised = []
         for d in data:
-            data_normalized.append(np.array(d) / np.linalg.norm(d))
+            data_normalised.append(np.array(d) / np.linalg.norm(d))
 
-        data_normalized = np.array(data_normalized)
-        return data_normalized
+        data_normalised = np.array(data_normalised)
+        return data_normalised
 
     def save_parameters_as_json(self, output_path: str) -> None:
         """Save the quantum circuit information in json
@@ -542,19 +541,19 @@ class QuClassiCircuit():
 
         return loaded_quclassi_circuit
 
-    def calculate_likelihood(self, data: Union[List[List[float]], List[float]], backend: str, shots: int, should_normalize: bool, on_ibmq: bool) -> List[float]:
+    def calculate_likelihood(self, data: Union[List[List[float]], List[float]], backend: str, shots: int, should_normalise: bool, on_ibmq: bool) -> List[float]:
         """Calculate likeliohoods
 
         :param Union[List[List[float]], List[float]] data: classical data
         :param str backend: backend
         :param int shots: number of executions
-        :param bool should_normalize: whether or not normalise each data
+        :param bool should_normalise: whether or not normalise each data
         :param bool on_ibmq: whether or not ibmq is used
         :return List[float] likelihoods: likelihoods
         """
         data_np = np.array(data)
-        if should_normalize:
-            prepared_data = self.normalize_data(data) if len(data_np.shape) != 1 else self.normalize_data([data])
+        if should_normalise:
+            prepared_data = self.normalise_data(data) if len(data_np.shape) != 1 else self.normalise_data([data])
         else:
             prepared_data = data if len(data_np.shape) != 1 else [data]
 
