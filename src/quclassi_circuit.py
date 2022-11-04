@@ -396,14 +396,14 @@ class QuClassiCircuit():
                             # Calculate the quantum fidelity-like value of the foward state
                             forward_thetas_list = copy.deepcopy(self.thetas_list)
                             forward_thetas_list[first_theta_index][second_theta_index][third_theta_index] += np.pi / (2 * np.sqrt(epoch))
-                            forward_fidelity = self.run_with_building_another_circuit(thetas_list=forward_thetas_list, data=vector,
-                                                                                      backend=backend, shots=shots, on_ibmq=on_ibmq)
+                            forward_fidelity = self.__run_with_building_another_circuit(thetas_list=forward_thetas_list, data=vector,
+                                                                                        backend=backend, shots=shots, on_ibmq=on_ibmq)
 
                             # Calculate the quantum fidelity-like value of the backward state
                             backward_thetas_list = copy.deepcopy(self.thetas_list)
                             backward_thetas_list[first_theta_index][second_theta_index][third_theta_index] -= np.pi / (2 * np.sqrt(epoch))
-                            backward_fidelity = self.run_with_building_another_circuit(thetas_list=backward_thetas_list, data=vector,
-                                                                                       backend=backend, shots=shots, on_ibmq=on_ibmq)
+                            backward_fidelity = self.__run_with_building_another_circuit(thetas_list=backward_thetas_list, data=vector,
+                                                                                         backend=backend, shots=shots, on_ibmq=on_ibmq)
 
                             # Calculate the loss value
                             self.__load_into_qubits(vector)
@@ -434,9 +434,9 @@ class QuClassiCircuit():
                 self.save_parameters_as_json(f"latest_{label}.json")
 
         print("Successfully trained.")
-        print(f"The best loss is {self.best_loss} on {self.best_epochs} epochs")
+        print(f"The best loss is {self.best_loss} on {self.best_epochs} epochs.")
 
-    def run_with_building_another_circuit(self, thetas_list, data, backend, shots, on_ibmq) -> float:
+    def __run_with_building_another_circuit(self, thetas_list, data, backend, shots, on_ibmq) -> float:
         another_quclassi = QuClassiCircuit(self.modified_input_size)
         another_quclassi.build_quantum_circuit(self.structure, thetas_list, is_in_train=True)                        
         another_quclassi.__load_into_qubits(data)
