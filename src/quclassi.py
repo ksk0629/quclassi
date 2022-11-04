@@ -3,6 +3,7 @@ import json
 import os
 from typing import Dict, List, Optional, Tuple, Union
 
+import mlflow
 import numpy as np
 
 from quclassi_circuit import QuClassiCircuit
@@ -190,6 +191,8 @@ class QuClassi():
             # Calculate the crossentropy between predicions and truths
             current_loss = self.calculate_cross_entropy_error(probabilities_list=probabilities_list, true_labels=train_labels)
 
+            mlflow.log_metric(f"train_crros_entropy_loss", current_loss)
+
             # Print loss information
             if self.best_loss is None or current_loss < self.best_loss:
                 print(f"\tloss = {current_loss} <- the best loss ever")
@@ -201,6 +204,8 @@ class QuClassi():
             current_accuracy = self.evaluate(data=dev_data, true_labels=dev_label,
                                              backend=backend, shots=shots,
                                              should_normalise=should_normalise, on_ibmq=on_ibmq)
+
+            mlflow.log_metric(f"dev_accuracy", current_accuracy)
 
             if self.best_accuracy is None or current_accuracy < self.best_accuracy:
                 print(f"\taccuracy = {current_accuracy} <- the best accuracy ever")

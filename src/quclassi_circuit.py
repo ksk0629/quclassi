@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from typing import List, Optional, Union
 
+import mlflow
 import numpy as np
 from tqdm import tqdm
 import qiskit
@@ -423,6 +424,7 @@ class QuClassiCircuit():
 
             # Update learning information in class variables
             total_loss_over_epochs = len(data) - total_loss_over_epochs
+            mlflow.log_metric(f"train_{label}_loss", total_loss_over_epochs)
             self.__loss_history.append(total_loss_over_epochs)
             self.__epochs += 1
             if len(self.loss_history) == 1 or total_loss_over_epochs < self.best_loss:
