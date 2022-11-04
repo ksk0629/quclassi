@@ -152,7 +152,7 @@ class QuClassi():
             # Calculate the crossentropy between predicions and truths
             current_loss = self.calculate_cross_entropy_error(probabilities_list=probabilities_list, true_labels=train_labels)
 
-            mlflow.log_metric(f"train_crros_entropy_loss", current_loss)
+            mlflow.log_metric(f"train_crros_entropy_loss", current_loss, step=epoch)
 
             # Print loss information
             if self.best_loss is None or current_loss < self.best_loss:
@@ -166,7 +166,7 @@ class QuClassi():
                                              backend=backend, shots=shots,
                                              should_normalise=should_normalise, on_ibmq=on_ibmq)
 
-            mlflow.log_metric(f"dev_accuracy", current_accuracy)
+            mlflow.log_metric(f"dev_accuracy", current_accuracy, step=epoch)
 
             if self.best_accuracy is None or current_accuracy < self.best_accuracy:
                 print(f"\taccuracy = {current_accuracy} <- the best accuracy ever")
