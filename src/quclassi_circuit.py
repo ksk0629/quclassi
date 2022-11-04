@@ -19,6 +19,8 @@ class QuClassiCircuit():
         # Let the given input_size be an even number
         if input_size % 2 != 0:
             modified_input_size = input_size + 1
+        else:
+            modified_input_size = input_size
 
         # Initialise class variables
         self.__modified_input_size = modified_input_size  # an input size
