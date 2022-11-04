@@ -5,3 +5,5 @@ mlruns
 .vscode
 
 *.json
+
+*.code-workspace
