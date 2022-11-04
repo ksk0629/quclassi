@@ -206,25 +206,25 @@ class QuClassiCircuit():
             print("Successfully built.")
 
     def __add_single_qubit_unitary_layer(self, thetas: List[float]) -> None:
-        """Add the single qubit unitary layler into the quantum circuit
+        """Add the single qubit unitary layer into the quantum circuit.
 
-        :param List[float] thetas: rotation angles
+        :param List[float] thetas: the rotation angles
         :raises ValueError: if the length of thetas is not the same as the number of qubits for the representative quantum state
         """
         # Check whether the given thetas is valid or not
         if self.num_trained_qubits != len(thetas):
-            msg = f"The shape of thetas must be ({self.num_trained_qubits}, 2), but ({len(thetas)}, 2)."
+            msg = f"The shape of given thetas must be ({self.num_trained_qubits}, 2)" \
+                  f"but this is ({len(thetas)}, 2)."
             raise ValueError(msg)
 
         # Prepare ry and rz gates
-        for qubit, theta in enumerate(thetas):
-            qubit += 1
+        for qubit, theta in enumerate(thetas, 1):
             theta_y, theta_z = theta
             self.quantum_circuit.ry(qubit=qubit, theta=theta_y)
             self.quantum_circuit.rz(qubit=qubit, phi=theta_z)
 
     def __add_dual_qubit_unitary_layer(self, thetas: List[float]) -> None:
-        """Add the dual qubit unitary layer into the quantum circuit
+        """Add the dual qubit unitary layer into the quantum circuit.
 
         :param List[float] thetas: rotation angles
         :raises ValueError: if the length of thetas is not the same the combinations of the qubits for the representative quantum state
@@ -232,60 +232,60 @@ class QuClassiCircuit():
         # Check whether the given thetas is valid or not
         num_combinations = np.arange(1, self.num_trained_qubits).sum()
         if num_combinations != len(thetas):
-            msg = f"The shape of thetas must be ({num_combinations}, 2), but ({len(thetas)}, 2)."
+            msg = f"The shape of thetas must be ({num_combinations}, 2)" \
+                  f"but this is ({len(thetas)}, 2)."
             raise ValueError(msg)
 
         # Prepare ryy and rzz gates
-        for basis_qubit, theta in enumerate(thetas):
-            basis_qubit += 1
+        for basis_qubit, theta in enumerate(thetas, 1):
             theta_y, theta_z = theta
 
-            partner_qubits = np.arange(basis_qubit+1, self.num_trained_qubits+1)
+            partner_qubits = np.arange(basis_qubit, self.num_trained_qubits+1)
             for partner_qubit in partner_qubits:
                 self.quantum_circuit.ryy(theta=theta_y, qubit1=basis_qubit, qubit2=partner_qubit)
                 self.quantum_circuit.rzz(theta=theta_z, qubit1=basis_qubit, qubit2=partner_qubit)
 
     def __add_controlled_qubit_unitary_layer(self, thetas: List[float]) -> None:
-        """Add the controlled qubit unitary layer into the quantum circuit
+        """Add the controlled qubit unitary layer into the quantum circuit.
 
         :param List[float] thetas: rotation angles
         :raises ValueError: if the length of thetas is not the same the number of the qubits for the representative quantum state
         """
         # Check whether the given thetas is valid or not
         if self.num_trained_qubits != len(thetas):
-            msg = f"The shape of thetas must be ({self.num_trained_qubits}, 2), but ({len(thetas)}, 2)"
+            msg = f"The shape of thetas must be ({self.num_trained_qubits}, 2)" \
+                  f"but this is ({len(thetas)}, 2)."
             raise ValueError(msg)
 
         # Prepare cry and crz gates
-        for qubit, theta in enumerate(thetas):
-            qubit += 1
+        for qubit, theta in enumerate(thetas, 1):
             theta_y, theta_z = theta
             self.quantum_circuit.cry(theta=theta_y, control_qubit=0, target_qubit=qubit)
             self.quantum_circuit.crz(theta=theta_z, control_qubit=0, target_qubit=qubit)
 
     def __add_load_structure(self) -> None:
-        """Add gates for loading data into the quantum cirucit
+        """Add gates for loading data into the quantum cirucit.
         """
         thetas = np.array([0, 0] * self.num_trained_qubits).reshape(-1, 2)
 
         # Prepare ry and rz gates
-        for qubit, theta in enumerate(thetas):
-            qubit += 1 + self.num_trained_qubits
+        for qubit, theta in enumerate(thetas, 1):
+            qubit += self.num_trained_qubits
             theta_y, theta_z = theta
             self.quantum_circuit.ry(qubit=qubit, theta=theta_y)
             self.quantum_circuit.rz(qubit=qubit, phi=theta_z)
 
     def __add_cswap(self) -> None:
-        """Add the controlled swap into the quantum circuit
+        """Add the controlled swap into the quantum circuit.
         """
         # Add the cswap gate (Fredkin gate) into the quantum circuit
-        for qubit in range(self.num_trained_qubits):
-            trained_qubit = qubit + 1
+        for trained_qubit in range(self.num_trained_qubits, 1):
             loaded_qubit = trained_qubit + self.num_trained_qubits
             self.quantum_circuit.fredkin(0, trained_qubit, loaded_qubit)
 
     def run(self, backend: str, shots: int, on_ibmq: bool) -> float:
         """Run the quantum circuit and obtain the fidelity-like value
+
         Note that, it is not the exact quantum state fidelity |<x|y>| but (1 + |<x|y>|^2)/2.
         This output is for comparing two numbers by their size and (1 + k^2)/2 < (1 + l^2)/2 holds for any k < l.
         Therefore it is not a big problem if either the fidelity-like value or the exact quantum state fidelity is used.
