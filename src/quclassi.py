@@ -265,22 +265,12 @@ class QuClassi():
                     correct += 1
                 else:
                     wrong += 1
-            accuracy = correct / (correct + wrong) * 100
-
-            # Print the resutls
-            print(f"the number of correct classified_labels is {correct}")
-            print(f"the number of wrong classified_labels is {wrong}")
-            print(f"the accuracy is {accuracy} [%]")
 
             total_correct += correct
             total_wrong += wrong
 
-        # Print the final results
+        # Get the total accuracy
         total_accuracy = total_correct / (total_correct + total_wrong) * 100
-        print("=== FINAL RESULT ===")
-        print(f"the number of correct classified_labels is {total_correct}")
-        print(f"the number of wrong classified_labels is {total_wrong}")
-        print(f"the accuracy is {total_accuracy} [%]")
 
         return total_accuracy
 
