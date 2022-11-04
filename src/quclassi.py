@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import mlflow
 import numpy as np
+from tqdm import tqdm
 
 from quclassi_circuit import QuClassiCircuit
 
@@ -133,10 +134,11 @@ class QuClassi():
             msg = f"len(train_data) must be same as len(train_labels), but {len(train_data)} != {len(train_labels)}"
             raise ValueError(msg)
 
-        for epoch in range(1, epochs+1):
+        for epoch in tqdm(range(1, epochs+1)):
             print(f"================== epoch {epoch} ==================")
 
             # Train each quantum circuits
+            print("Start Training.")
             for label in self.unique_labels:
                 focused_indices = np.where(np.array(train_labels) == label)[0]
                 focused_train_data = np.array(train_data)[focused_indices]
@@ -239,8 +241,8 @@ class QuClassi():
         # Evaluate each circuit
         total_correct = 0
         total_wrong = 0
-        for label in self.unique_labels:
-            print(f"label {label}: Start evaluating")
+        print("Start evaluating.")
+        for label in tqdm(self.unique_labels):
             focused_indices = np.where(np.array(true_labels) == label)[0]
             focused_data = data[focused_indices]
             focused_true_labels = np.array(true_labels)[focused_indices]
