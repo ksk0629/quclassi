@@ -7,3 +7,5 @@ mlruns
 *.json
 
 *.code-workspace
+
+notebook
