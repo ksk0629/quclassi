@@ -1,7 +1,7 @@
 import copy
 import json
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import qiskit
@@ -284,11 +284,7 @@ class QuClassiCircuit():
             self.quantum_circuit.fredkin(0, trained_qubit, loaded_qubit)
 
     def run(self, backend: str, shots: int, on_ibmq: bool) -> float:
-        """Run the quantum circuit and obtain the fidelity-like value
-
-        Note that, it is not the exact quantum state fidelity |<x|y>| but (1 + |<x|y>|^2)/2.
-        This output is for comparing two numbers by their size and (1 + k^2)/2 < (1 + l^2)/2 holds for any k < l.
-        Therefore it is not a big problem if either the fidelity-like value or the exact quantum state fidelity is used.
+        """Run the quantum circuit and obtain the quantum state fidelity.
 
         :param str backend: backend
         :param int shots: number of executions
@@ -308,13 +304,47 @@ class QuClassiCircuit():
         counts = result.get_counts(self.quantum_circuit)
 
         try:
-            fidelity_like = counts["0"] / shots
+            num_of_zeros = counts["0"]
         except KeyError:
             # if there is no observatino '0' in the result
             msg = "There is no observation '0' in the result of this execution."
             raise ValueError(msg)
 
-        return fidelity_like
+        fidelity = self.get_quantum_state_fidelity(num_of_zeros=num_of_zeros, shots=shots)
+
+        return fidelity
+
+    def get_fidelity_like_value(self, num_of_zeros: int, shots: int) -> float:
+        """Get the fidelity like value.
+
+        Note that, it is not the exact quantum state fidelity |<x|y>| but (1 + |<x|y>|^2)/2.
+        This output is for comparing two numbers by their size and (1 + k^2)/2 < (1 + l^2)/2 holds for any k < l.
+        Therefore it is not a big problem if either the fidelity-like value or the exact quantum state fidelity is used.
+
+        :param int num_of_zero: the number of zeros
+        :param int shots: the number of executions
+        :return float: the fidelity-like value
+        """
+        return num_of_zeros / shots
+
+    def get_quantum_state_fidelity(self, num_of_zeros: int, shots: int) -> float:
+        """Get the quantum state fidelity.
+
+        :param int num_of_zeros: the number of zeros
+        :param int shots: the number of executions
+        :raises ValueError: if the fidelity value is negative
+        :return float: the quantum state fidelity
+        """
+        fidelity_like = self.get_fidelity_like_value(num_of_zeros=num_of_zeros, shots=shots)  # (1 + |<x|y>|^2)/2
+        squared_fidelity = fidelity_like * 2 - 1  # |<x|y>|^2
+        fidelity = np.sqrt(squared_fidelity)  # |<x|y>|
+
+        if fidelity < 0:
+            msg = f"The quantum state fidelity must be non-negative," \
+                  f"but this is {fidelity}."
+            raise ValueError(msg)
+
+        return fidelity
 
     def load_into_qubits(self, data: List[float]) -> None:
         """Load classical data on the qubits
