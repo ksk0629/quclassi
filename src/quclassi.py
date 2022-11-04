@@ -13,23 +13,63 @@ class QuClassi():
 
     def __init__(self, input_size: int, labels: List[str]) -> None:
         """
-        :param int input_size: input size
+        :param int input_size: the input size
         :param List[str] labels: training labels
         """
-        self.input_size = input_size
-        self.unique_labels = np.unique(labels)
+        self.__input_size = input_size
+        self.__unique_labels = np.unique(labels)
 
-        self.loss_history = []
-        self.accuracy_history = []
+        self.__loss_history = []
+        self.__accuracy_history = []
 
         # Generate quantum circuits of each label
-        self.quantum_circuits = dict()
+        self.__quantum_circuits = dict()
         for label in self.unique_labels:
-            self.quantum_circuits[label] = QuClassiCircuit(self.input_size, label)
+            self.__quantum_circuits[label] = QuClassiCircuit(self.input_size, label)
+
+    @property
+    def input_size(self) -> int:
+        """Return the input size.
+
+        :return int: the input size
+        """
+        return self.__input_size
+
+    @property
+    def unique_labels(self) -> np.ndarray:
+        """Return the unique labels.
+
+        :return np.ndarray: the unique labels
+        """
+        return self.__unique_labels
+
+    @property
+    def loss_history(self) -> List[float]:
+        """Return the history of loss values.
+
+        :return List[float]: the history of loss values
+        """
+        return self.__loss_history
+
+    @property
+    def accuracy_history(self) -> List[float]:
+        """Return the hisotry of the accuracy values.
+
+        :return List[float]: the hisotry of the accuracy values
+        """
+        return self.__accuracy_history
+
+    @property
+    def quantum_circuits(self) -> Dict[str, QuClassiCircuit]:
+        """Return the quantum circuits in dict.
+
+        :return Dict[str, QuClassiCircuit]: the quantum circuits
+        """
+        return self.__quantum_circuits
 
     @property
     def best_loss(self) -> float:
-        """Return best loss value
+        """Return the best loss value.
 
         :return float: best loss value
         """
@@ -37,9 +77,9 @@ class QuClassi():
 
     @property
     def best_accuracy(self) -> float:
-        """Return best accuracy value
+        """Return the best accuracy value.
 
-        :return float: best accuracy value
+        :return float: the best accuracy value
         """
         return np.max(self.accuracy_history) if len(self.accuracy_history) != 0 else None
 
