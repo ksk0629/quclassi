@@ -427,15 +427,9 @@ class QuClassiCircuit():
             mlflow.log_metric(f"train_{label}_loss", total_loss_over_epochs, step=epoch)
             self.__loss_history.append(total_loss_over_epochs)
             self.__epochs += 1
-            if len(self.loss_history) == 1 or total_loss_over_epochs < self.best_loss:
-                print(f"\tloss = {total_loss_over_epochs} <- the best loss ever")
-            else:
-                print(f"\tloss = {total_loss_over_epochs}")
 
             if should_save_each_epoch:
                 self.save_parameters_as_json(f"latest_{label}.json")
-
-        print(f"The best loss is {self.best_loss} on {self.best_epochs} epochs.")
 
     def __run_with_building_another_circuit(self, thetas_list, data, backend, shots, on_ibmq) -> float:
         another_quclassi = QuClassiCircuit(self.modified_input_size)

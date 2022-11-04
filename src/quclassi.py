@@ -154,12 +154,6 @@ class QuClassi():
 
             mlflow.log_metric(f"train_crros_entropy_loss", current_loss, step=epoch)
 
-            # Print loss information
-            if self.best_loss is None or current_loss < self.best_loss:
-                print(f"\tloss = {current_loss} <- the best loss ever")
-            else:
-                print(f"\tloss = {current_loss}")
-
             self.loss_history.append(current_loss)
 
             current_accuracy = self.evaluate(data=dev_data, true_labels=dev_label,
@@ -167,11 +161,6 @@ class QuClassi():
                                              should_normalise=should_normalise, on_ibmq=on_ibmq)
 
             mlflow.log_metric(f"dev_accuracy", current_accuracy, step=epoch)
-
-            if self.best_accuracy is None or current_accuracy < self.best_accuracy:
-                print(f"\taccuracy = {current_accuracy} <- the best accuracy ever")
-            else:
-                print(f"\taccuracy = {current_accuracy}")
 
             self.accuracy_history.append(current_accuracy)
 
