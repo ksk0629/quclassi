@@ -1,7 +1,7 @@
 import copy
 import json
 import os
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import mlflow
 import numpy as np
