@@ -131,8 +131,8 @@ class QuClassi():
     def train_and_eval(self, train_data: List[List[float]], train_labels: List[str],
                        dev_data: List[List[float]], dev_label: List[str],
                        epochs: int, learning_rate: float, backend: str,
-                       shots: int, patience: Optional[int], should_normalise: bool,
-                       should_save_each_epoch: bool, on_ibmq: bool) -> None:
+                       shots: int, patience: Optional[int], objective_value: Optional[float],
+                       should_normalise: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train and evaluate all quantum circuits
 
         :param List[List[float]] train_data: learning data
@@ -142,6 +142,7 @@ class QuClassi():
         :param str backend: backend
         :param int shots: number of executions
         :param Optional[int] patience: patience for early stopping
+        :param Optional[float] objective_value: objective validation value
         :param bool should_normalise: whether or not normalise each data
         :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
         :param bool on_ibmq: whether or not ibmq is used
@@ -181,6 +182,11 @@ class QuClassi():
                                              should_normalise=should_normalise, on_ibmq=on_ibmq)
             mlflow.log_metric(f"dev_accuracy", current_accuracy, step=epoch)
             self.accuracy_history.append(current_accuracy)
+
+            # Check if early stopping should work
+            if objective_value is not None and objective_value <= current_accuracy:
+                print("\nEarly stopping works.")
+                break
 
             # Check if early stopping should work
             if patience is not None and patience > 0:

@@ -36,7 +36,8 @@ def preprocess_dataset(data: List[List[float]], labels: List[str], random_state:
 
 def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
                        random_state: int, shuffle: bool, train_size: float, should_scale: bool,
-                       structure: str, epochs: int, learning_rate: float, backend: str, shots: int, patience: Optional[int],
+                       structure: str, epochs: int, learning_rate: float, backend: str, shots: int,
+                       patience: Optional[int], objective_value: Optional[float],
                        should_normalise: bool, should_save_each_epoch: bool,
                        on_ibmq: bool) -> object:
     """Train and evaluate QuClassi.
@@ -54,6 +55,7 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
     :param str backend: backend
     :param int shots: number of executions
     :param Optional[int] patience: patience for early stopping
+    :param Optional[float] objective_value: objective validation value
     :param bool should_normalise: whether or not normalise each data
     :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
     :param bool on_ibmq: whether or not ibmq is used
@@ -73,7 +75,8 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
     # Train and evaluate QuClassi
     quclassi.train_and_eval(x_train, y_train, x_test, y_test,
                             epochs=epochs, learning_rate=learning_rate,
-                            backend=backend, shots=shots, patience=patience, should_normalise=should_normalise,
+                            backend=backend, shots=shots, patience=patience,
+                            objective_value=objective_value, should_normalise=should_normalise,
                             should_save_each_epoch=should_save_each_epoch, on_ibmq=on_ibmq)
 
     # Save the QuClassi model
