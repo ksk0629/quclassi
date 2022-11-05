@@ -3,157 +3,243 @@ import json
 from pathlib import Path
 from typing import List, Optional, Union
 
+import mlflow
 import numpy as np
+from tqdm import tqdm
 import qiskit
 
 
 class QuClassiCircuit():
-    """QuClassiにて、1つのクラスに対応する量子回路のクラス"""
+    """One quantum circuit belonging to a QuClassi, which corresponds to one class"""
 
     def __init__(self, input_size: int, name: Optional[str] = None) -> None:
-        """量子レジスタと古典レジスタを生成し、それらから量子回路を生成する
+        """Initialise a quantum circuit
 
-        :param int input_size: 入力ベクトルの次元
-        :param Optional[str] name: 量子回路の名前, defaults to None
+        :param int input_size: input size
+        :param Optional[str] name: name of quantum circuit, defaults to None
         """
-        # 入力次元を偶数化する
+        # Let the given input_size be an even number
         if input_size % 2 != 0:
-            input_size += 1
-        self.modified_input_size = input_size  # 入力次元
-        self.num_qubits = input_size + 1  # 全量子ビット数
-        self.num_trained_qubits = input_size // 2  # 本回路の代表量子状態生成に使用する量子ビット数
-        self.num_cbits = 1  # 古典ビット数
+            modified_input_size = input_size + 1
+        else:
+            modified_input_size = input_size
 
-        # クラス変数を初期化する
-        self.best_loss = None
-        self.loss_history = []
-        self.epochs = 0
-        self.label = None
+        # Initialise class variables
+        self.__modified_input_size = modified_input_size  # an input size
+        self.__num_trained_qubits = modified_input_size // 2  # the number of qubits for generating a representative quantum state
+        self.__num_cbits = 1  # the number of classical bits
+        self.__loss_history = []
+        self.__epochs = 0
+        self.__label = None
+        self.__structure = None
+        self.__thetas_list = []
 
-        # 量子回路を生成する
-        self.control_quantum_register = qiskit.QuantumRegister(1, name="control_qubit")
-        self.trained_quantum_register = qiskit.QuantumRegister(self.num_trained_qubits, name="trained_qubit")
-        self.loaded_quantum_register = qiskit.QuantumRegister(self.num_trained_qubits, name="loaded_qubit")
-        self.classical_register = qiskit.ClassicalRegister(self.num_cbits, name="classical_bit")
-        self.quantum_circuit = qiskit.QuantumCircuit(self.control_quantum_register,
-                                                     self.trained_quantum_register,
-                                                     self.loaded_quantum_register,
-                                                     self.classical_register,
-                                                     name=name)
+        # Generate a quantum circuit
+        self.__control_quantum_register = qiskit.QuantumRegister(1, name="control_qubit")
+        self.__trained_quantum_register = qiskit.QuantumRegister(self.num_trained_qubits, name="trained_qubit")
+        self.__loaded_quantum_register = qiskit.QuantumRegister(self.num_trained_qubits, name="loaded_qubit")
+        self.__classical_register = qiskit.ClassicalRegister(self.num_cbits, name="classical_bit")
+        self.__quantum_circuit = qiskit.QuantumCircuit(self.control_quantum_register,
+                                                       self.trained_quantum_register,
+                                                       self.loaded_quantum_register,
+                                                       self.classical_register,
+                                                       name=name)
+
+    @property
+    def modified_input_size(self) -> int:
+        """Return the modified input size
+
+        :return int: modified input size
+        """
+        return self.__modified_input_size
+
+    @property
+    def num_trained_qubits(self) -> int:
+        """Return the number of trained qubits
+
+        :return int: number of trained qubits
+        """
+        return self.__num_trained_qubits
+
+    @property
+    def num_cbits(self) -> int:
+        """Return the number of classical bits
+
+        :return int: number of classical bits
+        """
+        return self.__num_cbits
+
+    @property
+    def loss_history(self) -> List[float]:
+        """Return the loss values
+
+        :return List[float]: loss values
+        """
+        return self.__loss_history
+
+    @property
+    def epochs(self) -> int:
+        """Return the number of epochs that have been done
+
+        :return int: number of epochs
+        """
+        return self.__epochs
+
+    @property
+    def label(self) -> str:
+        """Return the label
+
+        :return str: label
+        """
+        return self.__label
+
+    @property
+    def control_quantum_register(self) -> qiskit.QuantumRegister:
+        return self.__control_quantum_register
+
+    @property
+    def trained_quantum_register(self) -> qiskit.QuantumRegister:
+        return self.__trained_quantum_register
+
+    @property
+    def loaded_quantum_register(self) -> qiskit.QuantumRegister:
+        return self.__loaded_quantum_register
+
+    @property
+    def classical_register(self) -> qiskit.ClassicalRegister:
+        return self.__classical_register
+
+    @property
+    def quantum_circuit(self) -> qiskit.QuantumCircuit:
+        return self.__quantum_circuit
+
+    @property
+    def structure(self) -> str:
+        """Return the structure of the quantum circiut.
+
+        :return str: the structure of the quantum circuit
+        """
+        return self.__structure
+
+    @property
+    def thetas_list(self) -> List[float]:
+        """Return the rotation angles.
+
+        :return List[float]: the rotation angles
+        """
+        return self.__thetas_list
+
+    @property
+    def num_thetas(self) -> int:
+        """Return the number of the rotation angles.
+
+        :return int: the number of the rotation angles
+        """
+        return sum([len(np.array(thetas).reshape(-1)) for thetas in self.thetas_list])
+
+    @property
+    def best_loss(self) -> float:
+        """Return the best loss value
+
+        :return float: best loss value
+        """
+        return np.min(self.loss_history) if len(self.loss_history) != 0 else None
+
+    @property
+    def best_epochs(self) -> int:
+        """Return the epoch with the best loss value
+
+        :return int: best epoch
+        """
+        return np.argmin(self.loss_history) + 1 if len(self.loss_history) != 0 else None
 
     def build_quantum_circuit(self, structure: List[str], thetas_list: List[List[float]], is_in_train: bool = False) -> None:
-        """量子回路を構成する
+        """Build a quantum circuit
 
-        :param List[str] structure: 構造を定める文字列 (s,d,cのみからなる文字列)
-        :param List[List[float]] thetas_list: structureで定めた構造における初期回転角
-        :param bool is_in_train: 学習中かどうか, defaults to False
-        :raises ValueError: structureにs,d,c以外の文字が含まれる場合
-        :raises ValueError: structureとthis_listの長さが異なる場合
+        :param List[str] structure: string, which has only s, d and c, to decide the structure
+        :param List[List[float]] thetas_list: initial rotation angles
+        :param bool is_in_train: whether or not this function is called whilst learning, defaults to False
+        :raises ValueError: if a given structure has other than s, d and c
+        :raises ValueError: if the lengths of structure and this_list are not the same
         """
-        # 与えられた構造の妥当性を確認し、問題があればエラーを発生させる
+        # Check whether the given structure is valid or not
         num_s = structure.count('s')
         num_d = structure.count('d')
         num_c = structure.count('c')
         if num_s + num_d + num_c != len(structure):
-            msg = f"structure must have only 's', 'd', and 'c', but this structure is {structure}"
+            msg = f"A given structure must have only 's', 'd' and 'c'," \
+                  f"but this one is '{structure}'."
             raise ValueError(msg)
         if len(structure) != len(thetas_list):
-            msg = f"length of structure must equal to length of thetas_list,\nbut len(structure) = {len(structure)} and len(thetas_list) = {len(thetas_list)}"
+            msg = f"The length of a given structure must equal to" \
+                  f"the length of a given thetas_list,\n" \
+                  f"but len(structure) = {len(structure)} and" \
+                  f"len(thetas_list) = {len(thetas_list)}."
             raise ValueError(msg)
 
-        # 制御用の量子ゲートを用意する
+        # Prepare the Hadamard gate in order to perform the SWAP test
         self.quantum_circuit.h(0)
         self.quantum_circuit.barrier()
 
-        # 代表量子状態生成のための量子ゲートを用意する
+        # Prepare quantum gates in order to generate the representative quantum state
         for letter, thetas in zip(structure, thetas_list):
             if letter == 's':
-                self.add_single_qubit_unitary_layer(thetas)
+                self.__add_single_qubit_unitary_layer(thetas)
             elif letter == 'd':
-                self.add_dual_qubit_unitary_layer(thetas)
+                self.__add_dual_qubit_unitary_layer(thetas)
             elif letter == 'c':
-                self.add_controlled_qubit_unitary_layer(thetas)
+                self.__add_controlled_qubit_unitary_layer(thetas)
 
             self.quantum_circuit.barrier()
 
-        # 生成した量子回路の情報をクラス変数に保存する
-        self.structure = structure
-        self.thetas_list = thetas_list
-        self.num_thetas = sum([len(np.array(thetas).reshape(-1)) for thetas in self.thetas_list])
+        # Store the information into class variables
+        self.__structure = structure
+        self.__thetas_list = thetas_list
 
-        # データ読込のための量子ゲートを準備する
-        self.add_load_structure()
+        # Prepare quantum gates in order to load data
+        self.__add_load_structure()
 
-        # SWAPテストのために必要な残りのゲートを準備する
-        self.add_cswap()
+        # Prepare the cswap gates, the Hadamard gate and the measurement in order to perform the SWAP test
+        self.__add_cswap()
         self.quantum_circuit.h(0)
         self.quantum_circuit.measure(0, 0)
 
         if not is_in_train:
             print("Successfully built.")
 
-    def run(self, back_end: str, shots: int, on_ibmq: bool) -> float:
-        """生成してある量子回路を実行し、量子状態フィデリティに準じるを求める
-        ただし、厳密には量子状態フィデリティ|<x|y>|ではなく、(1 + |<x|y>|^2)/2を計算する
-        任意のk < lに対して、(1 + k^2)/2 < (1 + l^2)/2であり、
-        ここでの出力は大小関係を見るために使われるので、大きな問題はない
+    def __add_single_qubit_unitary_layer(self, thetas: List[float]) -> None:
+        """Add the single qubit unitary layer into the quantum circuit.
 
-        :param str back_end: バックエンド
-        :param int shots: 量子回路の実行回数(期待値を取る回数)
-        :param bool on_ibmq: 実機を使うかどうか
-        :raises ValueError: shots回の実効の中に0が一度も観測されなかった場合
-        :return float fidelity_like: フィデリティと単調関係にある値
+        :param List[float] thetas: the rotation angles
+        :raises ValueError: if the length of thetas is not the same as the number of qubits for the representative quantum state
         """
-        # 量子回路をshots回数だけ実行する
-        if on_ibmq:
-            job = qiskit.execute(qiskit.transpile(self.quantum_circuit, back_end), backend=back_end, shots=shots)
-        else:
-            simulator = qiskit.Aer.get_backend(back_end)
-            job = qiskit.execute(self.quantum_circuit, simulator, shots=shots)
-        # 結果を取得する
-        result = job.result()
-        counts = result.get_counts(self.quantum_circuit)
-
-        try:
-            fidelity_like = counts["0"] / shots
-        except KeyError:
-            # 結果0が得られなかった場合
-            msg = "There is no observation '0' in the result of this execution."
-            raise ValueError(msg)
-
-        return fidelity_like
-
-    def add_single_qubit_unitary_layer(self, thetas: List[float]) -> None:
-        """量子回路にsingle qubit unitary層を追加する
-
-        :param List[float] thetas: 回転角のリスト
-        :raises ValueError: thetasの長さが代表量子状態用量子ビット数と異なる場合
-        """
+        # Check whether the given thetas is valid or not
         if self.num_trained_qubits != len(thetas):
-            msg = f"The shape of thetas must be ({self.num_trained_qubits}, 2), but ({len(thetas)}, 2)."
+            msg = f"The shape of given thetas must be ({self.num_trained_qubits}, 2)" \
+                  f"but this is ({len(thetas)}, 2)."
             raise ValueError(msg)
 
-        # RYとRZゲートを用意する
-        for qubit, theta in enumerate(thetas):
-            qubit += 1
+        # Prepare ry and rz gates
+        for qubit, theta in enumerate(thetas, 1):
             theta_y, theta_z = theta
             self.quantum_circuit.ry(qubit=qubit, theta=theta_y)
             self.quantum_circuit.rz(qubit=qubit, phi=theta_z)
 
-    def add_dual_qubit_unitary_layer(self, thetas: List[float]) -> None:
-        """量子回路にdual qubit unitary層を追加する
+    def __add_dual_qubit_unitary_layer(self, thetas: List[float]) -> None:
+        """Add the dual qubit unitary layer into the quantum circuit.
 
-        :param List[float] thetas: 回転角のリスト
-        :raises ValueError: thetasの長さが異なる代表量子状態用量子ビット2つの組み合わせ数と異なる場合
+        :param List[float] thetas: rotation angles
+        :raises ValueError: if the length of thetas is not the same the combinations of the qubits for the representative quantum state
         """
+        # Check whether the given thetas is valid or not
         num_combinations = np.arange(1, self.num_trained_qubits).sum()
         if num_combinations != len(thetas):
-            msg = f"The shape of thetas must be ({num_combinations}, 2), but ({len(thetas)}, 2)."
+            msg = f"The shape of thetas must be ({num_combinations}, 2)" \
+                  f"but this is ({len(thetas)}, 2)."
             raise ValueError(msg)
 
-        # RYYとRZZゲートを用意する
-        for basis_qubit, theta in enumerate(thetas):
-            basis_qubit += 1
+        # Prepare ryy and rzz gates
+        for basis_qubit, theta in enumerate(thetas, 1):
             theta_y, theta_z = theta
 
             partner_qubits = np.arange(basis_qubit+1, self.num_trained_qubits+1)
@@ -161,201 +247,258 @@ class QuClassiCircuit():
                 self.quantum_circuit.ryy(theta=theta_y, qubit1=basis_qubit, qubit2=partner_qubit)
                 self.quantum_circuit.rzz(theta=theta_z, qubit1=basis_qubit, qubit2=partner_qubit)
 
-    def add_controlled_qubit_unitary_layer(self, thetas: List[float]) -> None:
-        """量子回路にcontrolled qubit unitary層を追加する
+    def __add_controlled_qubit_unitary_layer(self, thetas: List[float]) -> None:
+        """Add the controlled qubit unitary layer into the quantum circuit.
 
-        :param List[float] thetas: 回転角のリスト
-        :raises ValueError: thetasの長さが代表量子状態用量子ビット数と異なる場合
+        :param List[float] thetas: rotation angles
+        :raises ValueError: if the length of thetas is not the same the number of the qubits for the representative quantum state
         """
+        # Check whether the given thetas is valid or not
         if self.num_trained_qubits != len(thetas):
-            msg = f"The shape of thetas must be ({self.num_trained_qubits}, 2), but ({len(thetas)}, 2)"
+            msg = f"The shape of thetas must be ({self.num_trained_qubits}, 2)" \
+                  f"but this is ({len(thetas)}, 2)."
             raise ValueError(msg)
 
-        # CRYとCRZゲートを用意する
-        for qubit, theta in enumerate(thetas):
-            qubit += 1
+        # Prepare cry and crz gates
+        for qubit, theta in enumerate(thetas, 1):
             theta_y, theta_z = theta
             self.quantum_circuit.cry(theta=theta_y, control_qubit=0, target_qubit=qubit)
             self.quantum_circuit.crz(theta=theta_z, control_qubit=0, target_qubit=qubit)
 
-    def add_load_structure(self) -> None:
-        """量子回路にデータ読込用の量子ゲートを追加する
+    def __add_load_structure(self) -> None:
+        """Add gates for loading data into the quantum cirucit.
         """
         thetas = np.array([0, 0] * self.num_trained_qubits).reshape(-1, 2)
 
-        # RYとRZゲートを用意する
-        for qubit, theta in enumerate(thetas):
-            qubit += 1 + self.num_trained_qubits
+        # Prepare ry and rz gates
+        for qubit, theta in enumerate(thetas, 1):
+            qubit += self.num_trained_qubits
             theta_y, theta_z = theta
             self.quantum_circuit.ry(qubit=qubit, theta=theta_y)
             self.quantum_circuit.rz(qubit=qubit, phi=theta_z)
 
-    def add_cswap(self) -> None:
-        """量子回路に制御スワップを追加する
+    def __add_cswap(self) -> None:
+        """Add the controlled swap into the quantum circuit.
         """
-        # CSWAPゲート(Fredkinゲート)を用意する
-        for qubit in range(self.num_trained_qubits):
-            trained_qubit = qubit + 1
+        # Add the cswap gate (Fredkin gate) into the quantum circuit
+        for trained_qubit in range(1, self.num_trained_qubits+1):
             loaded_qubit = trained_qubit + self.num_trained_qubits
             self.quantum_circuit.fredkin(0, trained_qubit, loaded_qubit)
 
-    def load_into_qubits(self, data: List[float]) -> None:
-        """古典データを回転角としてデータ読込用の量子ゲートに設定する
+    def run(self, backend: str, shots: int, on_ibmq: bool) -> float:
+        """Run the quantum circuit and obtain the quantum state fidelity.
 
-        :param List[float] data: 古典データ
-        :raises ValueError: 与えた古典データと量子回路の入力次元が異なる場合
+        :param str backend: backend
+        :param int shots: number of executions
+        :param bool on_ibmq: whether or not ibmq is used
+        :raises ValueError: if "0" is not observed
+        :return float fidelity_like: fidelity-like value
         """
-        # 論文で提案されている方法で古典データを回転角に変換する
-        thetas = 2 * np.arcsin(np.sqrt(data))
+        # Execute the quantum circuit
+        if on_ibmq:
+            job = qiskit.execute(qiskit.transpile(self.quantum_circuit, backend), backend=backend, shots=shots)
+        else:
+            simulator = qiskit.Aer.get_backend(backend)
+            job = qiskit.execute(self.quantum_circuit, simulator, shots=shots)
 
-        # 回転角の数を偶数個にする
-        if len(thetas) % 2 != 0:
-            thetas = np.append(thetas, 0)
+        # Get the result
+        result = job.result()
+        counts = result.get_counts(self.quantum_circuit)
 
-        # 量子回路の入力次元と異なればエラーを発生させる
-        if len(thetas) != self.modified_input_size:
-            mag = f"The length of data and self.modified_input_size must be same,\nbut the length is {len(thetas)} and self.modified_input_size is {self.modified_input_size}"
+        try:
+            num_of_zeros = counts["0"]
+        except KeyError:
+            # if there is no observatino '0' in the result
+            msg = "There is no observation '0' in the result of this execution."
             raise ValueError(msg)
 
-        theta_count = 0
-        for gate_information in self.quantum_circuit.data:
-            # 量子ゲートのうち以下を満たす量子ゲート(= データ読み込み用の量子ゲート)の回転角を変更する
-            #    - 読込用量子ビットloaded_qubitに作用する量子ゲートである
-            #    - RYあるいはRZゲートである
-            if (gate_information[1][0].register.name == "loaded_qubit") and (gate_information[0].name in ["ry", "rz"]):
-                gate_information[0]._params = [thetas[theta_count]]
-                theta_count += 1
+        fidelity = self.get_quantum_state_fidelity(num_of_zeros=num_of_zeros, shots=shots)
+
+        return fidelity
+
+    def get_fidelity_like_value(self, num_of_zeros: int, shots: int) -> float:
+        """Get the fidelity like value.
+
+        Note that, it is not the exact quantum state fidelity |<x|y>| but (1 + |<x|y>|^2)/2.
+        This output is for comparing two numbers by their size and (1 + k^2)/2 < (1 + l^2)/2 holds for any k < l.
+        Therefore it is not a big problem if either the fidelity-like value or the exact quantum state fidelity is used.
+
+        :param int num_of_zero: the number of zeros
+        :param int shots: the number of executions
+        :return float: the fidelity-like value
+        """
+        return num_of_zeros / shots
+
+    def get_quantum_state_fidelity(self, num_of_zeros: int, shots: int, epsilon: float=1e-8) -> float:
+        """Get the quantum state fidelity.
+
+        :param int num_of_zeros: the number of zeros
+        :param int shots: the number of executions
+        :param float epsilon: the number of executions, Defaults to 1e-8
+        :raises ValueError: if the fidelity value is negative
+        :raises ValueError: if the fidelity value is inf or NaN
+        :return float: the quantum state fidelity
+        """
+        fidelity_like = self.get_fidelity_like_value(num_of_zeros=num_of_zeros, shots=shots)  # (1 + |<x|y>|^2)/2
+        squared_fidelity = fidelity_like * 2 - 1  # |<x|y>|^2
+        if squared_fidelity > 0:
+            fidelity = np.sqrt(squared_fidelity)  # |<x|y>|
+        else:
+            fidelity = epsilon
+
+        if fidelity < 0:
+            msg = f"The quantum state fidelity must be non-negative," \
+                  f"but this is {fidelity}."
+            raise ValueError(msg)
+
+        if np.isinf(fidelity) or np.isnan(fidelity):
+            msg = f"The quantum state fidelity is {fidelity}"
+            print(f"fidelity_like: {fidelity_like}")
+            print(f"squared_fidelity: {squared_fidelity}")
+            print(f"fidelity: {fidelity}")
+
+            raise ValueError(msg)
+
+        return fidelity
 
     def draw(self) -> Optional[object]:
-        """現在の量子回路を可視化する
-        matplotlibが使える場合はFigureを返し、使えない場合は標準出力に出力する
+        """Visualise the quantum circuit.
 
-        :return Optional[object]: matplotlibが使える場合のみ量子回路のmatplotlib.figure.Figure
+        This function returns figure if matplotlib is available otherwise prints the quantum circuit to the standard output.
+
+        :return Optional[object]: matplotlib.figure.Figure if matplotlib is available
         """
         try:
             return self.quantum_circuit.draw("mpl")
         except:
             print(self.quantum_circuit.draw())
 
-    def train(self, data: List[List[float]], label: str, epochs: int, learning_rate: float, back_end: str, shots: int,
-              should_normalize: bool, should_show: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
-        """学習を実行する
+    def train(self, data: List[List[float]], label: str, epochs: int, learning_rate: float, backend: str, shots: int,
+              should_normalise: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
+        """Train the quantum circuit.
 
-        :param List[List[float]] data: 学習データ
-        :param str label: 学習するラベル名
-        :param int epochs: 学習回数
-        :param float learning_rate: 学習率
-        :param str back_end: バックエンド名
-        :param int shots: 量子回路の実行回数(期待値を取る回数)
-        :param bool should_normalize: 各データを正規化するかどうか
-        :param bool should_show: 学習過程を標準出力に出すかどうか
-        :param bool should_save_each_epoch: 1エポック毎に量子回路の情報を出力するかどうか
-        :param bool on_ibmq: 実機を使うかどうか
+        :param List[List[float]] data: training data
+        :param str label: training label
+        :param int epochs: number of epochs
+        :param float learning_rate: learning rate
+        :param str backend: backend
+        :param int shots: number of executions
+        :param bool should_normalise: whether or not normalise each data
+        :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
+        :param bool on_ibmq: whether or not ibmq is used
         """
-        # データの準備をする
-        prepared_data = self.normalize_data(data) if should_normalize else data.copy()
+        # Prepare the data
+        prepared_data = self.normalise_data(data) if should_normalise else data.copy()
 
-        # ラベル名をクラス変数に保存する
-        self.label = label
+        # Store the given label into a class variable
+        self.__label = label
 
-        # 学習中の出力のために学習データ数の1/10を計算する
-        duration = len(data) // 10
-
-        # 学習に関する情報を標準出力に出力する
-        print(f"============ label {self.label}: Start training ============")
-        print(f"the number of epochs is {epochs}")
-        print(f"the number of data is {len(data)}")
-        print(f"the number of thetas is {self.num_thetas}")
-        print(f"the number of iterations per epoch is {len(data)} * {self.num_thetas} = {len(data) * self.num_thetas}")
-        print(f"the number of all iterations is {epochs} * {len(data)} * {self.num_thetas} = {epochs * len(data) * self.num_thetas}")
-
-        # 学習を開始する
+        # Train
         for epoch in range(1, epochs+1):
-            print(f"epoch {epoch}: ", end="")
-
             total_loss_over_epochs = 0
-            for data_index, vector in enumerate(prepared_data):
+            for vector in tqdm(prepared_data, desc=f"[Label {label} training]", leave=False):
 
                 total_loss = 0
-                for first_theta_index, thetas in enumerate(self.thetas_list):  # 層に対応する回転角
-                    for second_theta_index, theta_yz in enumerate(thetas):  # 代表量子状態用の各量子ビットに作用する量子ゲートたちの回転角
-                        for third_theta_index in range(len(theta_yz)):  # 1つ量子ゲートの回転角
-                            # フォワード状態のフィデリティを計算する (論文のアルゴリズムの7~13行目辺り)
-                            forward_quclassi = QuClassiCircuit(self.modified_input_size)
+                for first_theta_index, thetas in enumerate(self.thetas_list):  # for each layer
+                    for second_theta_index, theta_yz in enumerate(thetas):  # for each quantum gate for the representative quantum state
+                        for third_theta_index in range(len(theta_yz)):  # for each rotation angle
+                            # Calculate the quantum fidelity-like value of the foward state
                             forward_thetas_list = copy.deepcopy(self.thetas_list)
                             forward_thetas_list[first_theta_index][second_theta_index][third_theta_index] += np.pi / (2 * np.sqrt(epoch))
-                            forward_quclassi.build_quantum_circuit(self.structure, forward_thetas_list, is_in_train=True)                        
-                            forward_quclassi.load_into_qubits(vector)
-                            forward_fidelity_like = forward_quclassi.run(back_end=back_end, shots=shots, on_ibmq=on_ibmq)
+                            forward_fidelity = self.__run_with_building_another_circuit(thetas_list=forward_thetas_list, data=vector,
+                                                                                        backend=backend, shots=shots, on_ibmq=on_ibmq)
 
-                            # バックワード状態のフィデリティを計算する (論文のアルゴリズムの15~20行目辺り)
-                            backward_quclassi = QuClassiCircuit(self.modified_input_size)
+                            # Calculate the quantum fidelity-like value of the backward state
                             backward_thetas_list = copy.deepcopy(self.thetas_list)
                             backward_thetas_list[first_theta_index][second_theta_index][third_theta_index] -= np.pi / (2 * np.sqrt(epoch))
-                            backward_quclassi.build_quantum_circuit(self.structure, backward_thetas_list, is_in_train=True)
-                            backward_quclassi.load_into_qubits(vector)
-                            backward_fidelity_like = backward_quclassi.run(back_end=back_end, shots=shots, on_ibmq=on_ibmq)
+                            backward_fidelity = self.__run_with_building_another_circuit(thetas_list=backward_thetas_list, data=vector,
+                                                                                         backend=backend, shots=shots, on_ibmq=on_ibmq)
 
-                            # 損失値を求める (求めているものは尤度なので、大きい方がよい)
-                            self.load_into_qubits(vector)
-                            loss = self.run(back_end=back_end, shots=shots, on_ibmq=on_ibmq)
+                            # Calculate the loss value
+                            self.__load_into_qubits(vector)
+                            loss = self.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
                             total_loss += loss
 
-                            # パラメータを更新する (論文のアルゴリズムの20行目)
-                            update_term = -0.5 * (np.log(forward_fidelity_like) - np.log(backward_fidelity_like))
+                            # Update the parameter
+                            update_term = -0.5 * (np.log(forward_fidelity) - np.log(backward_fidelity))
                             self.thetas_list[first_theta_index][second_theta_index][third_theta_index] -= learning_rate * update_term
 
-                            # 更新したパラメータで量子回路を再構成する (lossの計算が必要ない場合は最後に一度だけでもいい)
+                            # Reconstruce the quantum circuit with updated parameters
+                            # This step is not needed if the loss value is not needed
                             self.quantum_circuit.data = []
                             self.build_quantum_circuit(self.structure, self.thetas_list, is_in_train=True)
 
-                # 設定に応じて、データセット数の約10分の1進捗毎に標準出力へメッセージを出力する
-                if should_show and (data_index+1) % duration == 0:
-                    print(f"\tCompleted training {data_index+1} data")
-
                 total_loss_over_epochs += total_loss / self.num_thetas
 
-            # クラス変数の学習情報を更新する
-            total_loss_over_epochs = len(data) - total_loss_over_epochs  # 最大尤度は1なので、データ数から尤度(損失値)を減少
-            self.loss_history.append(total_loss_over_epochs)
-            self.epochs += 1
-            if self.best_loss is None or total_loss_over_epochs < self.best_loss:
-                self.best_loss = total_loss_over_epochs
-                self.best_epochs = epoch
-                print(f"\tloss = {total_loss_over_epochs} <- the best loss ever")
-            else:
-                print(f"\tloss = {total_loss_over_epochs}")
+            # Update learning information in class variables
+            total_loss_over_epochs = len(data) - total_loss_over_epochs
+            mlflow.log_metric(f"train_{label}_loss", total_loss_over_epochs, step=epoch)
+            self.__loss_history.append(total_loss_over_epochs)
+            self.__epochs += 1
 
             if should_save_each_epoch:
                 self.save_parameters_as_json(f"latest_{label}.json")
 
-        print("Successfully trained.")
-        print(f"The best loss is {self.best_loss} on {self.best_epochs} epochs")
+    def __run_with_building_another_circuit(self, thetas_list, data, backend, shots, on_ibmq) -> float:
+        another_quclassi = QuClassiCircuit(self.modified_input_size)
+        another_quclassi.build_quantum_circuit(self.structure, thetas_list, is_in_train=True)                        
+        another_quclassi.__load_into_qubits(data)
+        fidelity = another_quclassi.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
 
-    def normalize_data(self, data: List[List[float]]) -> np.array:
-        """データを正規化する
+        return fidelity
 
-        :param List[List[float]] data: 古典データ
-        :return numpy.array data_normalized: 正規化済み古典データ
+    def __load_into_qubits(self, data: List[float]) -> None:
+        """Load classical data on the qubits.
+
+        :param List[float] data: classical data
+        :raises ValueError: if the dimension of the given classical data is not the same as the input size of the quantum circuit
         """
-        data_normalized = []
-        for d in data:
-            data_normalized.append(np.array(d) / np.linalg.norm(d))
+        # Convert the given classical data into rotation angles
+        thetas = 2 * np.arcsin(np.sqrt(data))
 
-        data_normalized = np.array(data_normalized)
-        return data_normalized
+        # Let the length of the given thetas be an even number
+        if len(thetas) % 2 != 0:
+            thetas = np.append(thetas, 0)
 
-    def save_parameters_as_json(self, output_path: str) -> None:
-        """量子回路の情報をjsonで保存する
-
-        :param str output_path: 出力パス
-        :raises ValueError: output_pathの拡張子が.jsonではなかった場合
-        """
-        if ".json" != Path(output_path).suffix:
-            msg = f"The suffix of output_path must be .json, but this output_path is {output_path}"
+        # Check whether the given thetas is valid or not
+        if len(thetas) != self.modified_input_size:
+            msg = f"The length of the given data and self.modified_input_size must be same\n" \
+                  f"but the length is {len(thetas)} and self.modified_input_size is {self.modified_input_size}"
             raise ValueError(msg)
 
-        # jsonでの保存に向けて辞書に必要なデータをまとめる
+        theta_count = 0
+        for gate_information in self.quantum_circuit.data:
+            # Set rotation angles on the quantum gate that satisfies the following conditions.
+            #    - The quantum gate is operated to loading qubits.
+            #    - The quantum gate is ry or rz.
+            if (gate_information[1][0].register.name == "loaded_qubit") and (gate_information[0].name in ["ry", "rz"]):
+                gate_information[0]._params = [thetas[theta_count]]
+                theta_count += 1
+
+    def normalise_data(self, data: List[List[float]]) -> np.array:
+        """Normalise data.
+
+        :param List[List[float]] data: classical data
+        :return numpy.array data_normalised: normalised classical data
+        """
+        data_normalised = []
+        for d in data:
+            data_normalised.append(np.array(d) / np.linalg.norm(d))
+
+        data_normalised = np.array(data_normalised)
+        return data_normalised
+
+    def save_parameters_as_json(self, output_path: str) -> None:
+        """Save the quantum circuit information in json.
+
+        :param str output_path: output path
+        :raises ValueError: if the extension of the given output_path is not .json
+        """
+        if ".json" != Path(output_path).suffix:
+            msg = f"The suffix of output_path must be .json" \
+                  f"but this output_path is {output_path}."
+            raise ValueError(msg)
+
         model_information = dict()
 
         model_information["modified_input_size"] = self.modified_input_size
@@ -374,27 +517,26 @@ class QuClassiCircuit():
         model_information["loss_history"] = self.loss_history
         model_information["best_loss"] = self.best_loss
 
-        # json形式で出力パスに出力する
+        # Output the json file
         with open(output_path, 'w', encoding="utf-8") as output:
             json.dump(model_information, output, indent=4)
 
     @classmethod
     def load_parameters_from_json(cls, model_path: str) -> object:
-        """量子回路をjsonファイルから生成する
+        """Load the quantum circuit by the given json
 
-        :param str model_path: 読込jsonファイルのパス
-        :raises ValueError: model_pathの拡張子が.jsonではなかった場合
-        :return QuClassiCircuit loaded_quclassi_circuit: 読込んだQuClassiCircuitオブジェクト
+        :param str model_path: model path
+        :return QuClassiCircuit loaded_quclassi_circuit: Loaded QuClassiCircuit object
+        :raises ValueError: if the extension of the model_path is not .json
         """
         if ".json" != Path(model_path).suffix:
-            msg = f"The suffix of model_path must be .json, but this model_path is {model_path}"
+            msg = f"The suffix of model_path must be .json" \
+                  f"but this model_path is {model_path}."
             raise ValueError(msg)
 
-        # モデルの情報を読込む
         with open(model_path) as model_file:
             model_information = json.load(model_file)
 
-        # QuClassiオブジェクトを生成し、読込んだ情報を格納する
         loaded_quclassi_circuit = cls(model_information["modified_input_size"])
         loaded_quclassi_circuit.build_quantum_circuit(model_information["structure"], model_information["thetas_list"])
         loaded_quclassi_circuit.label = model_information["label"]
@@ -404,26 +546,26 @@ class QuClassiCircuit():
 
         return loaded_quclassi_circuit
 
-    def calculate_likelihood(self, data: Union[List[List[float]], List[float]], back_end: str, shots: int, should_normalize: bool, on_ibmq: bool) -> List[float]:
-        """尤度(self.run()関数の出力)を計算する
+    def calculate_likelihood(self, data: Union[List[List[float]], List[float]], backend: str, shots: int, should_normalise: bool, on_ibmq: bool) -> List[float]:
+        """Calculate likeliohoods
 
-        :param Union[List[List[float]], List[float]] data: 古典データ
-        :param str back_end: バックエンド
-        :param int shots: 量子回路の実行回数(期待値を取る回数)
-        :param bool should_normalize: 各データを正規化するかどうか
-        :param bool on_ibmq: 実機を使うかどうか
-        :return List[float] likelihoods: 尤度
+        :param Union[List[List[float]], List[float]] data: classical data
+        :param str backend: backend
+        :param int shots: number of executions
+        :param bool should_normalise: whether or not normalise each data
+        :param bool on_ibmq: whether or not ibmq is used
+        :return List[float] likelihoods: likelihoods
         """
         data_np = np.array(data)
-        if should_normalize:
-            prepared_data = self.normalize_data(data) if len(data_np.shape) != 1 else self.normalize_data([data])
+        if should_normalise:
+            prepared_data = self.normalise_data(data) if len(data_np.shape) != 1 else self.normalise_data([data])
         else:
             prepared_data = data if len(data_np.shape) != 1 else [data]
 
         likelihoods = []
         for vector in prepared_data:
-            self.load_into_qubits(vector)
-            fidelity_like = self.run(back_end=back_end, shots=shots, on_ibmq=on_ibmq)
+            self.__load_into_qubits(vector)
+            fidelity_like = self.run(backend=backend, shots=shots, on_ibmq=on_ibmq)
 
             likelihoods.append(fidelity_like)
 

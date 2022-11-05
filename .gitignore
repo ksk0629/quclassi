@@ -1,0 +1,11 @@
+src/__pycache__
+
+mlruns
+
+.vscode
+
+*.json
+
+*.code-workspace
+
+notebook
