@@ -1,6 +1,6 @@
 import argparse
 import time
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import mlflow
 import numpy as np
