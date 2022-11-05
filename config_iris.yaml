@@ -13,7 +13,7 @@ train:
   backend: qasm_simulator
   shots: 8000
   patience: 3
-  objective_value: 20
+  objective_value: 100
   should_normalise: True
   should_save_each_epoch: False
   on_ibmq: False
