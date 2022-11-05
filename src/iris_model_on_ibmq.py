@@ -1,6 +1,6 @@
 import argparse
 import time
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import mlflow
 import numpy as np
@@ -86,6 +86,7 @@ def set_epochs(quclassi_object: QuClassi, objective_epochs: int) -> Dict[str, in
 
 def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size: float, should_scale: bool,
                                     structure: str, epochs: int, learning_rate: float, backend: str, shots: int,
+                                    patience: Optional[int], objective_value: Optional[float],
                                     should_normalise: bool, should_save_each_epoch: bool) -> Tuple[QuClassi, float, Tuple[time.time, time.time]]:
     """Train and evaluate QuClassi with the iris dataset on IBMQ
 
@@ -98,6 +99,8 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
     :param float learning_rate: learning rate
     :param str backend: backend
     :param int shots: number of executions
+    :param Optional[int] patience: patience for early stopping
+    :param Optional[float] objective_value: objective validation value
     :param bool should_normalise: whether or not normalise each data
     :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
     :return QuClassi quclassi: Trained QuClassi
@@ -135,7 +138,8 @@ def train_and_evaluate_iris_on_ibmq(random_state: int, shuffle: bool, train_size
 
         quclassi.train(x_train, y_train,
                        epochs=epochs_dict, learning_rate=learning_rate,
-                       backend=backend, shots=shots, should_normalise=should_normalise,
+                       backend=backend, shots=shots, patience=patience,
+                       objective_value=objective_value, should_normalise=should_normalise,
                        should_save_each_epoch=should_save_each_epoch, on_ibmq=True)
     train_time = time.time() - start_time
     print("Training is done.")

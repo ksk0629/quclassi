@@ -1,7 +1,7 @@
 import copy
 import json
 import os
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import mlflow
 import numpy as np
@@ -131,7 +131,8 @@ class QuClassi():
     def train_and_eval(self, train_data: List[List[float]], train_labels: List[str],
                        dev_data: List[List[float]], dev_label: List[str],
                        epochs: int, learning_rate: float, backend: str,
-                       shots: int, should_normalise: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
+                       shots: int, patience: Optional[int], objective_value: Optional[float],
+                       should_normalise: bool, should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train and evaluate all quantum circuits
 
         :param List[List[float]] train_data: learning data
@@ -140,6 +141,8 @@ class QuClassi():
         :param float learning_rate: learning rate
         :param str backend: backend
         :param int shots: number of executions
+        :param Optional[int] patience: patience for early stopping
+        :param Optional[float] objective_value: objective validation value
         :param bool should_normalise: whether or not normalise each data
         :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
         :param bool on_ibmq: whether or not ibmq is used
@@ -150,10 +153,9 @@ class QuClassi():
             msg = f"len(train_data) must be same as len(train_labels), but {len(train_data)} != {len(train_labels)}"
             raise ValueError(msg)
 
+        current_patience = 0
         tqdm_epochs = tqdm(range(1, epochs+1))
         for epoch in tqdm_epochs:
-            tqdm_epochs.set_postfix({"Loss_train": self.latest_loss, "Accuracy_val": self.latest_accuracy})
-
             # Train each quantum circuits
             for label in self.unique_labels:
                 focused_indices = np.where(np.array(train_labels) == label)[0]
@@ -167,20 +169,42 @@ class QuClassi():
             _, probabilities_list = self.classify(data=train_data, backend=backend, shots=shots,
                                                   should_normalise=should_normalise, on_ibmq=on_ibmq)
 
-            # Calculate the crossentropy between predicions and truths
+            # Calculate and register the crossentropy between predicions and truths
             current_loss = self.calculate_cross_entropy_error(probabilities_list=probabilities_list, true_labels=train_labels)
-
             mlflow.log_metric(f"train_crros_entropy_loss", current_loss, step=epoch)
-
             self.loss_history.append(current_loss)
 
+            previous_best_accuracy = self.best_accuracy
+
+            # Calculate and register the accuracy
             current_accuracy = self.evaluate(data=dev_data, true_labels=dev_label,
                                              backend=backend, shots=shots,
                                              should_normalise=should_normalise, on_ibmq=on_ibmq)
-
             mlflow.log_metric(f"dev_accuracy", current_accuracy, step=epoch)
-
             self.accuracy_history.append(current_accuracy)
+
+            # Check if early stopping should work
+            if objective_value is not None and objective_value <= current_accuracy:
+                print(f"\nEarly stopping works since the accuracy {current_accuracy} was reached to {objective_value}.")
+                break
+
+            # Check if early stopping should work
+            if patience is not None and patience > 0:
+                tqdm_epochs.set_postfix({"Loss_train": self.latest_loss,
+                                         "Accuracy_val": self.latest_accuracy,
+                                         "Current_patience": current_patience})
+
+                if previous_best_accuracy is not None and previous_best_accuracy >= self.latest_accuracy:
+                    current_patience += 1
+                else:
+                    current_patience = 0
+
+                if current_patience == patience:
+                    print(f"\nEarly stopping works since the accuracy seems that it is not going up.")
+                    break
+            else:
+                tqdm_epochs.set_postfix({"Loss_train": self.latest_loss,
+                                         "Accuracy_val": self.latest_accuracy})
 
     def calculate_cross_entropy_error(self, probabilities_list: List[List[float]], true_labels: List[str]) -> float:
         """Calculate the cross entropy from true labels
