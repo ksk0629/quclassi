@@ -185,7 +185,7 @@ class QuClassi():
 
             # Check if early stopping should work
             if objective_value is not None and objective_value <= current_accuracy:
-                print("\nEarly stopping works.")
+                print(f"\nEarly stopping works since the accuracy {current_accuracy} was reached to {objective_value}.")
                 break
 
             # Check if early stopping should work
@@ -200,7 +200,7 @@ class QuClassi():
                     current_patience = 0
 
                 if current_patience == patience:
-                    print("\nEarly stopping works.")
+                    print(f"\nEarly stopping works since the accuracy seems that it is not going up.")
                     break
             else:
                 tqdm_epochs.set_postfix({"Loss_train": self.latest_loss,
