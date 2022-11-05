@@ -155,10 +155,6 @@ class QuClassi():
         current_patience = 0
         tqdm_epochs = tqdm(range(1, epochs+1))
         for epoch in tqdm_epochs:
-            tqdm_epochs.set_postfix({"Loss_train": self.latest_loss,
-                                     "Accuracy_val": self.latest_accuracy,
-                                     "Current_patience": current_patience})
-
             # Train each quantum circuits
             for label in self.unique_labels:
                 focused_indices = np.where(np.array(train_labels) == label)[0]
@@ -188,6 +184,10 @@ class QuClassi():
 
             # Check if early stopping should work
             if patience is not None and patience > 0:
+                tqdm_epochs.set_postfix({"Loss_train": self.latest_loss,
+                                         "Accuracy_val": self.latest_accuracy,
+                                         "Current_patience": current_patience})
+
                 if previous_best_accuracy is not None and previous_best_accuracy >= self.latest_accuracy:
                     current_patience += 1
                 else:
@@ -196,6 +196,9 @@ class QuClassi():
                 if current_patience == patience:
                     print("\nEarly stopping works.")
                     break
+            else:
+                tqdm_epochs.set_postfix({"Loss_train": self.latest_loss,
+                                         "Accuracy_val": self.latest_accuracy})
 
     def calculate_cross_entropy_error(self, probabilities_list: List[List[float]], true_labels: List[str]) -> float:
         """Calculate the cross entropy from true labels
