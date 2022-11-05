@@ -36,7 +36,7 @@ def preprocess_dataset(data: List[List[float]], labels: List[str], random_state:
 
 def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
                        random_state: int, shuffle: bool, train_size: float, should_scale: bool,
-                       structure: str, epochs: int, learning_rate: float, backend: str, shots: int, patience: int,
+                       structure: str, epochs: int, learning_rate: float, backend: str, shots: int, patience: Optional[int],
                        should_normalise: bool, should_save_each_epoch: bool,
                        on_ibmq: bool) -> object:
     """Train and evaluate QuClassi.
@@ -53,7 +53,7 @@ def train_and_evaluate(data: List[List[float]], labels: List[str], prefix: str,
     :param float learning_rate: learning rate
     :param str backend: backend
     :param int shots: number of executions
-    :param int patience: patience for early stopping
+    :param Optional[int] patience: patience for early stopping
     :param bool should_normalise: whether or not normalise each data
     :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
     :param bool on_ibmq: whether or not ibmq is used

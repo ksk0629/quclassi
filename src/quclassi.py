@@ -131,7 +131,7 @@ class QuClassi():
     def train_and_eval(self, train_data: List[List[float]], train_labels: List[str],
                        dev_data: List[List[float]], dev_label: List[str],
                        epochs: int, learning_rate: float, backend: str,
-                       shots: int, patience: int, should_normalise: bool,
+                       shots: int, patience: Optional[int], should_normalise: bool,
                        should_save_each_epoch: bool, on_ibmq: bool) -> None:
         """Train and evaluate all quantum circuits
 
@@ -141,7 +141,7 @@ class QuClassi():
         :param float learning_rate: learning rate
         :param str backend: backend
         :param int shots: number of executions
-        :param int patience: patience for early stopping
+        :param Optional[int] patience: patience for early stopping
         :param bool should_normalise: whether or not normalise each data
         :param bool should_save_each_epoch: whether or not print the information of the quantum curcuit per one epoch
         :param bool on_ibmq: whether or not ibmq is used
@@ -187,7 +187,7 @@ class QuClassi():
             self.accuracy_history.append(current_accuracy)
 
             # Check if early stopping should work
-            if patience > 0:
+            if patience is not None and patience > 0:
                 if previous_best_accuracy is not None and previous_best_accuracy >= self.latest_accuracy:
                     current_patience += 1
                 else:
