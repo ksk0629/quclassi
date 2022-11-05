@@ -329,11 +329,12 @@ class QuClassiCircuit():
         """
         return num_of_zeros / shots
 
-    def get_quantum_state_fidelity(self, num_of_zeros: int, shots: int) -> float:
+    def get_quantum_state_fidelity(self, num_of_zeros: int, shots: int, epsilon: float=1e-8) -> float:
         """Get the quantum state fidelity.
 
         :param int num_of_zeros: the number of zeros
         :param int shots: the number of executions
+        :param float epsilon: the number of executions, Defaults to 1e-8
         :raises ValueError: if the fidelity value is negative
         :raises ValueError: if the fidelity value is inf or NaN
         :return float: the quantum state fidelity
@@ -343,7 +344,7 @@ class QuClassiCircuit():
         if squared_fidelity > 0:
             fidelity = np.sqrt(squared_fidelity)  # |<x|y>|
         else:
-            fidelity = 0
+            fidelity = epsilon
 
         if fidelity < 0:
             msg = f"The quantum state fidelity must be non-negative," \
